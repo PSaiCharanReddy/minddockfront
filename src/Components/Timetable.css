@@ -1,0 +1,107 @@
+.timetable-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0; /* Opens from the right */
+  width: 300px;
+  height: 100vh;
+  background-color: #1e1e1e;
+  border-left: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 100; /* Above the map */
+  box-shadow: -4px 0 15px rgba(0,0,0,0.3);
+}
+
+.timetable-sidebar.open {
+  transform: translateX(0);
+}
+
+.timetable-header {
+  padding: 15px;
+  background-color: #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #444;
+}
+
+.timetable-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #f0f0f0;
+}
+
+.task-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 15px;
+}
+
+.task-item {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.task-item.completed {
+  opacity: 0.5;
+  background-color: #222;
+}
+
+.task-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex-grow: 1;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #555;
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #007aff;
+}
+
+.checkbox.checked {
+  border-color: #007aff;
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.task-title {
+  font-size: 0.95rem;
+}
+
+.task-item.completed .task-title {
+  text-decoration: line-through;
+}
+
+.delete-task-btn {
+  background: none;
+  border: none;
+  color: #ff453a;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.task-item:hover .delete-task-btn {
+  opacity: 1;
+}
+
+.empty-state {
+  text-align: center;
+  color: #888;
+  margin-top: 50px;
+}

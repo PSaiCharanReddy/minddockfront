@@ -9,11 +9,15 @@ import {
   Background,
   applyNodeChanges,
   applyEdgeChanges,
+  MiniMap,
   useReactFlow,
   MarkerType,
-  getNodesBounds, // <-- CHANGED THIS IMPORT
+  getNodesBounds,
+  getViewportForBounds,
 } from '@xyflow/react';
-import { AiOutlineLoading } from 'react-icons/ai';
+
+import { toPng } from 'html-to-image';
+import { AiOutlineLoading, AiOutlineDownload, AiOutlineCalendar } from 'react-icons/ai'; // Added Calendar Icon
 import { BsChatDots } from 'react-icons/bs';
 
 import '@xyflow/react/dist/style.css';
@@ -24,6 +28,7 @@ import CustomNode from './Components/CustomNode';
 import ContextMenu from './Components/ContextMenu';
 import AIChat from './Components/AIChat';
 import Sidebar from './Components/Sidebar';
+import Timetable from './Components/Timetable'; // <-- NEW IMPORT
 import { useUndoRedo } from './hooks/useUndoRedo';
 
 let nodeId = 1000;
@@ -51,139 +56,96 @@ function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   
-  // --- Multi-Map State ---
+  // --- UI State ---
   const [maps, setMaps] = useState([]);
   const [currentMapId, setCurrentMapId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isTimetableOpen, setIsTimetableOpen] = useState(false); // <-- NEW
   
-  // --- UI State ---
+  // --- Logic State ---
   const [contextMenu, setContextMenu] = useState(null);
   const [aiLoadingNode, setAiLoadingNode] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  
-  // --- NEW: Clipboard State ---
   const [clipboard, setClipboard] = useState(null);
+  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0); // To reload tasks when one is added
 
-  // --- Refs & Hooks ---
   const saveTimeout = useRef(null);
   const isLoaded = useRef(false);
   const reactFlowWrapper = useRef(null);
   const rfInstance = useReactFlow();
   const { takeSnapshot, undo, redo } = useUndoRedo();
 
-  // --- COPY & PASTE LOGIC ---
-  const handleCopy = useCallback(() => {
-    const selectedNodes = nodes.filter((n) => n.selected);
-    const selectedEdges = edges.filter((e) => e.selected);
-    
-    if (selectedNodes.length > 0) {
-      console.log(`Copied ${selectedNodes.length} nodes to clipboard.`);
-      setClipboard({ nodes: selectedNodes, edges: selectedEdges });
+  // --- TASK / TIMETABLE LOGIC ---
+  const addToTimetable = async (node) => {
+    if (!node || !node.data.label) return;
+    try {
+      // Create task in backend
+      await apiClient.post('/tasks/', {
+        title: node.data.label,
+        description: node.data.summary || "Added from Mind Map",
+        due_date: new Date().toISOString() // Today
+      });
+      
+      // Open the timetable and refresh the list
+      setIsTimetableOpen(true);
+      setTaskRefreshTrigger(prev => prev + 1);
+      
+    } catch (error) {
+      console.error("Failed to add task:", error);
+      alert("Failed to add task. Check console.");
     }
+  };
+
+  // --- EXISTING FEATURES (Export, Copy/Paste, Undo/Redo, Load/Save) ---
+  // ... (Keep downloadImage, handleCopy, handlePaste, handleKeyDown from previous code) ...
+  const downloadImage = async () => {
+    await rfInstance.fitView({ padding: 0.4 });
+    setTimeout(() => {
+      const viewport = reactFlowWrapper.current.querySelector('.react-flow__viewport');
+      if (!viewport) return;
+      toPng(viewport, {
+        backgroundColor: '#1a1a1a', width: viewport.getBoundingClientRect().width, height: viewport.getBoundingClientRect().height, pixelRatio: 2, style: { transform: `translate(0, 0)` }
+      }).then((dataUrl) => {
+        const a = document.createElement('a'); a.setAttribute('download', `minddock-map-${Date.now()}.png`); a.setAttribute('href', dataUrl); a.click();
+      });
+    }, 500);
+  };
+
+  const handleCopy = useCallback(() => {
+    const selectedNodes = nodes.filter((n) => n.selected); const selectedEdges = edges.filter((e) => e.selected);
+    if (selectedNodes.length > 0) setClipboard({ nodes: selectedNodes, edges: selectedEdges });
   }, [nodes, edges]);
 
   const handlePaste = useCallback(() => {
     if (!clipboard || !clipboard.nodes.length) return;
-
-    takeSnapshot(nodes, edges); // Snapshot before pasting
-
+    takeSnapshot(nodes, edges);
     const { x, y, zoom } = rfInstance.getViewport();
-    // Paste in the center of the screen
     const centerX = -x / zoom + (window.innerWidth / 2) / zoom;
     const centerY = -y / zoom + (window.innerHeight / 2) / zoom;
-
-    // Calculate the center of the copied group to determine offset
-    // USE THE CORRECT FUNCTION HERE:
     const copiedBounds = getNodesBounds(clipboard.nodes);
-    
     const offsetX = centerX - (copiedBounds.x + copiedBounds.width / 2);
     const offsetY = centerY - (copiedBounds.y + copiedBounds.height / 2);
-
-    const idMap = new Map();
-    const newNodes = [];
-    const newEdges = [];
-
-    // 1. Re-create nodes with new IDs and positions
-    clipboard.nodes.forEach((node) => {
-      const newId = `${nodeId++}`;
-      idMap.set(node.id, newId);
-      
-      newNodes.push({
-        ...node,
-        id: newId,
-        selected: true, // Select the new pasted nodes
-        position: {
-          x: node.position.x + offsetX,
-          y: node.position.y + offsetY,
-        },
-        data: { ...node.data } // Deep copy data
-      });
-    });
-
-    // 2. Re-create edges using new node IDs
-    clipboard.edges.forEach((edge) => {
-      const newSource = idMap.get(edge.source);
-      const newTarget = idMap.get(edge.target);
-      // Only paste edge if both source and target were copied
-      if (newSource && newTarget) {
-        newEdges.push({
-          ...edge,
-          id: `e-${newSource}-${newTarget}-${Date.now()}`, // Unique Edge ID
-          source: newSource,
-          target: newTarget,
-          selected: true
-        });
-      }
-    });
-
-    // Deselect existing nodes so only pasted ones are selected
-    const deselectedNodes = nodes.map(n => ({ ...n, selected: false }));
-    const deselectedEdges = edges.map(e => ({ ...e, selected: false }));
-
-    setNodes([...deselectedNodes, ...newNodes]);
-    setEdges([...deselectedEdges, ...newEdges]);
-
+    const idMap = new Map(); const newNodes = []; const newEdges = [];
+    clipboard.nodes.forEach((node) => { const newId = `${nodeId++}`; idMap.set(node.id, newId); newNodes.push({ ...node, id: newId, selected: true, position: { x: node.position.x + offsetX, y: node.position.y + offsetY }, data: { ...node.data } }); });
+    clipboard.edges.forEach((edge) => { const newSource = idMap.get(edge.source); const newTarget = idMap.get(edge.target); if (newSource && newTarget) { newEdges.push({ ...edge, id: `e-${newSource}-${newTarget}-${Date.now()}`, source: newSource, target: newTarget, selected: true }); } });
+    setNodes([...nodes.map(n => ({ ...n, selected: false })), ...newNodes]);
+    setEdges([...edges.map(e => ({ ...e, selected: false })), ...newEdges]);
   }, [clipboard, nodes, edges, rfInstance, takeSnapshot]);
 
-
-  // --- KEYBOARD SHORTCUTS (Undo/Redo + Copy/Paste) ---
   useEffect(() => {
     const handleKeyDown = (e) => {
-      const isInput = ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
-      if (isInput) return;
-
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
       const isCtrl = e.metaKey || e.ctrlKey;
-
-      // Undo (Ctrl+Z)
-      if (isCtrl && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo(nodes, edges, setNodes, setEdges);
-      }
-      // Redo (Ctrl+Y or Ctrl+Shift+Z)
-      if ((isCtrl && e.key === 'y') || (isCtrl && e.shiftKey && e.key === 'z')) {
-        e.preventDefault();
-        redo(nodes, edges, setNodes, setEdges);
-      }
-      // Copy (Ctrl+C)
-      if (isCtrl && e.key === 'c') {
-        e.preventDefault();
-        handleCopy();
-      }
-      // Paste (Ctrl+V)
-      if (isCtrl && e.key === 'v') {
-        e.preventDefault();
-        handlePaste();
-      }
+      if (isCtrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(nodes, edges, setNodes, setEdges); }
+      if ((isCtrl && e.key === 'y') || (isCtrl && e.shiftKey && e.key === 'z')) { e.preventDefault(); redo(nodes, edges, setNodes, setEdges); }
+      if (isCtrl && e.key === 'c') { e.preventDefault(); handleCopy(); }
+      if (isCtrl && e.key === 'v') { e.preventDefault(); handlePaste(); }
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nodes, edges, undo, redo, handleCopy, handlePaste]);
 
-
-  // ... (Initial Load, Load Map, Create Map, Delete Map, Auto-Save) ...
   useEffect(() => { fetchMaps(); }, []);
   const fetchMaps = async () => { 
     try { setIsLoading(true); const response = await apiClient.get('/map/'); const mapList = response.data; setMaps(mapList);
@@ -209,8 +171,6 @@ function App() {
     if(currentMapId===id && rem.length>0) loadMap(rem[0].id); else if(rem.length===0) createMap("New Map"); }
     catch(e) { console.error(e); }
   };
-  
-  // Auto-Save
   useEffect(() => {
     if (!isLoaded.current || !currentMapId) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -231,20 +191,14 @@ function App() {
   const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
   const onNodesDelete = useCallback(() => { takeSnapshot(nodes, edges); }, [nodes, edges, takeSnapshot]);
-
   const addNode = useCallback((options) => {
     takeSnapshot(nodes, edges);
-    const newNode = {
-      id: `${nodeId++}`, type: 'mindNode',
-      position: options.position || { x: Math.random() * 400 - 200, y: Math.random() * 100 },
-      data: { label: options.label || 'Untitled', style: options.style || { backgroundColor: '#2a2a2a', color: '#f0f0f0' }, summary: options.summary || '' },
-    };
-    setNodes((nds) => nds.concat(newNode));
-    return newNode;
+    const newNode = { id: `${nodeId++}`, type: 'mindNode', position: options.position || { x: Math.random() * 400 - 200, y: Math.random() * 100 }, data: { label: options.label || 'Untitled', style: options.style || { backgroundColor: '#2a2a2a', color: '#f0f0f0' }, summary: options.summary || '' } };
+    setNodes((nds) => nds.concat(newNode)); return newNode;
   }, [setNodes, nodes, edges, takeSnapshot]);
 
-  // ... (AI Functions) ...
-  const generateRoadmap = useCallback(async (sourceNode) => {
+  // ... (AI & Logic Handlers) ...
+  const generateRoadmap = useCallback(async (sourceNode) => { /* ... code from prev step ... */ 
     if (!sourceNode || !sourceNode.data || !sourceNode.data.label) return;
     takeSnapshot(nodes, edges); setAiLoadingNode(sourceNode.id);
     try {
@@ -263,7 +217,7 @@ function App() {
     } catch (error) { console.error(error); } finally { setAiLoadingNode(null); }
   }, [rfInstance, setNodes, setEdges, nodes, edges, takeSnapshot]);
 
-  const onAiGeneratedMap = useCallback((newMapData) => {
+  const onAiGeneratedMap = useCallback((newMapData) => { /* ... code from prev step ... */ 
     takeSnapshot(nodes, edges);
     const { x, y, zoom } = rfInstance.getViewport();
     const centerX = -x / zoom + (window.innerWidth / 2) / zoom || 0;
@@ -281,8 +235,7 @@ function App() {
     setTimeout(() => rfInstance.fitView({ duration: 500, nodes: newNodes }), 100);
   }, [rfInstance, setNodes, setEdges, nodes, edges, takeSnapshot]);
 
-  // ... (Select Group) ...
-  const selectConnectedGroup = useCallback((startNodeId) => {
+  const selectConnectedGroup = useCallback((startNodeId) => { /* ... code from prev step ... */ 
     const connectedNodeIds = new Set(); const connectedEdgeIds = new Set(); const queue = [startNodeId]; connectedNodeIds.add(startNodeId);
     while (queue.length > 0) {
       const curr = queue.shift();
@@ -297,13 +250,18 @@ function App() {
     setEdges((eds) => eds.map((e) => ({ ...e, selected: connectedEdgeIds.has(e.id) })));
   }, [nodes, edges, setNodes, setEdges]);
 
-  // ... (Context Menus) ...
   const handlePaneClick = useCallback(() => setContextMenu(null), []);
   const onNodeContextMenu = useCallback((event, node) => { event.preventDefault(); setContextMenu({ id: node.id, node: node, type: 'node', top: event.clientY, left: event.clientX }); }, []);
   const onEdgeContextMenu = useCallback((event, edge) => { event.preventDefault(); setContextMenu({ id: edge.id, type: 'edge', top: event.clientY, left: event.clientX }); }, []);
+  
   const handleMenuAction = useCallback((action, payload) => {
     if (['setNodeColor', 'setEdgeStyle'].includes(action)) takeSnapshot(nodes, edges);
-    if (action === 'generateRoadmap') generateRoadmap(contextMenu.node);
+    
+    // --- NEW: Handle Add to Timetable ---
+    if (action === 'addToTimetable') {
+        addToTimetable(contextMenu.node);
+    }
+    else if (action === 'generateRoadmap') generateRoadmap(contextMenu.node);
     else if (action === 'selectGroup') selectConnectedGroup(contextMenu.id);
     else if (action === 'setNodeColor') setNodes((nds) => nds.map((n) => n.id === contextMenu.id ? { ...n, data: { ...n.data, style: { backgroundColor: payload.background, color: payload.text } } } : n));
     else if (action === 'setEdgeStyle') setEdges((eds) => eds.map((e) => e.id === contextMenu.id ? { ...e, markerEnd: payload === 'directional' ? { type: MarkerType.ArrowClosed } : undefined, style: payload === 'dotted' ? { strokeDasharray: '5 5' } : {} } : e));
@@ -315,13 +273,32 @@ function App() {
   // --- RENDER ---
   return (
     <div className={`app-container ${isChatOpen ? 'chat-open' : ''} ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-      <Sidebar maps={maps} currentMapId={currentMapId} onSelectMap={loadMap} onCreateMap={createMap} onDeleteMap={deleteMap} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+      
+      <Sidebar 
+        maps={maps}
+        currentMapId={currentMapId}
+        onSelectMap={loadMap}
+        onCreateMap={createMap}
+        onDeleteMap={deleteMap}
+        isOpen={isSidebarOpen}
+        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+      />
+
       <div className="react-flow-wrapper" ref={reactFlowWrapper}>
         <button onClick={() => addNode({})} className="add-node-btn" style={{ left: isSidebarOpen ? '270px' : '70px', transition: 'left 0.3s' }}>+ Add Note</button>
+        
         <div className="top-right-ui">
           <div className="save-indicator">{isSaving ? "Saving..." : "Saved"}</div>
-          <button onClick={() => { setIsChatOpen(!isChatOpen); setTimeout(() => window.dispatchEvent(new Event('resize')), 300); }} className="chat-toggle-btn"><BsChatDots /></button>
+          
+          {/* --- Timetable Toggle --- */}
+          <button onClick={() => setIsTimetableOpen(!isTimetableOpen)} className="chat-toggle-btn" title="Daily Timetable">
+            <AiOutlineCalendar />
+          </button>
+
+          <button onClick={downloadImage} className="chat-toggle-btn" title="Download Image"><AiOutlineDownload /></button>
+          <button onClick={() => { setIsChatOpen(!isChatOpen); setTimeout(() => window.dispatchEvent(new Event('resize')), 300); }} className="chat-toggle-btn" title="AI Chat"><BsChatDots /></button>
         </div>
+
         {currentMapId ? (
           <ReactFlow
             nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodesDelete={onNodesDelete}
@@ -329,15 +306,39 @@ function App() {
           >
             <Background />
             <Controls />
+            <MiniMap 
+              nodeStrokeColor={(n) => {
+                if (n.type === 'input') return '#0041d0';
+                if (n.type === 'output') return '#ff0072';
+                if (n.type === 'default') return '#1a192b';
+                return '#eee';
+              }}
+              nodeColor={(n) => {
+                if (n.style?.backgroundColor) return n.style.backgroundColor;
+                return '#fff';
+              }}
+              style={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+              zoomable
+              pannable
+            />
           </ReactFlow>
         ) : (
           <div className="loading-screen">
             {isLoading ? ( <div style={{textAlign:'center'}}><p>Loading MindDock...</p><small style={{color:'#666'}}>(First load may take a minute)</small></div> ) : ( <button onClick={fetchMaps} className="add-node-btn" style={{position:'relative', left:0, top:0}}>Retry Loading</button> )}
           </div>
         )}
+
         {contextMenu && <ContextMenu {...contextMenu} onAction={handleMenuAction} />}
       </div>
+      
       <AIChat nodes={nodes} edges={edges} onAiGeneratedMap={onAiGeneratedMap} isOpen={isChatOpen} toggleChat={() => setIsChatOpen(!isChatOpen)} />
+      
+      {/* --- TIMETABLE --- */}
+      <Timetable 
+        isOpen={isTimetableOpen} 
+        toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)} 
+        refreshTrigger={taskRefreshTrigger}
+      />
     </div>
   );
 }

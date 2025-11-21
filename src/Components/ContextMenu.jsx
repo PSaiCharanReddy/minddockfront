@@ -22,13 +22,18 @@ export default function ContextMenu({
     >
       {type === 'node' && (
         <>
-          {/* --- NEW BUTTON --- */}
-          <button onClick={() => handleAction('selectGroup')}>
-            🔗 Select Entire Group
-          </button>
-          
           <button onClick={() => handleAction('generateRoadmap')}>
             🤖 Generate Roadmap
+          </button>
+          
+          {/* --- NEW BUTTON --- */}
+          <button onClick={() => handleAction('addToTimetable')}>
+            📅 Add to Today
+          </button>
+          {/* ------------------ */}
+
+          <button onClick={() => handleAction('selectGroup')}>
+            🔗 Select Entire Group
           </button>
           
           <p>Node Color</p>
