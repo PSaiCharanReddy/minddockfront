@@ -1,0 +1,289 @@
+/* --- Global Styles --- */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  background-color: #1a1a1a;
+  color: #f0f0f0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* This is the main container for the whole app */
+.app-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  transition: margin-right 0.3s ease-in-out;
+}
+
+/* This is the wrapper for the map itself */
+.react-flow-wrapper {
+  flex-grow: 1; /* Takes up all available space */
+  height: 100%;
+  position: relative;
+  transition: width 0.3s ease-in-out;
+}
+
+/* --- Top-Left UI --- */
+.add-node-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  background-color: #007aff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.add-node-btn:hover {
+  background-color: #0056b3;
+}
+
+/* --- Top-Right UI (NEW) --- */
+.top-right-ui {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.save-indicator {
+  /* No longer needs position: absolute */
+  background-color: #2a2a2a;
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.chat-toggle-btn {
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  border: 1px solid #444;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+.chat-toggle-btn:hover {
+  border-color: #007aff;
+  color: #007aff;
+}
+
+/* --- React Flow Base Styles --- */
+.react-flow__background {
+  background-color: #1a1a1a !important;
+}
+/* We move the controls to stay with the map */
+.react-flow__controls {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* --- THE "PUSH" LOGIC --- */
+/* When chat is open, resize the map wrapper */
+.app-container.chat-open .react-flow-wrapper {
+  width: calc(100% - 370px); /* 370px is our sidebar width */
+}
+/* Move the React Flow controls left */
+.app-container.chat-open .react-flow__controls {
+  transform: translateX(-370px);
+}
+/* Move the top-right UI left */
+.app-container.chat-open .top-right-ui {
+  transform: translateX(-370px);
+}
+
+
+/* --- Custom Node (Unchanged) --- */
+.custom-node {
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 10px 15px;
+  min-width: 180px;
+  font-size: 16px;
+  transition: background-color 0.2s, border 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+.react-flow__node-mindNode.selected .custom-node {
+  border: 1px solid #007aff;
+  box-shadow: 0 0 10px 1px #007aff;
+}
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+.node-content {
+  flex-grow: 1;
+  cursor: grab;
+}
+.node-label {
+  padding: 5px 0;
+  font-weight: bold;
+}
+.node-input {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  font-size: 16px;
+  font-weight: bold;
+  width: 100%;
+  color: #f0f0f0;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  padding: 5px 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* --- Summary Controls (Unchanged) --- */
+.summary-controls {
+  position: absolute;
+  z-index: 10;
+  bottom: -14px;
+  right: -14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.summary-toggle-btn,
+.add-summary-btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #888;
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  transition: color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.add-summary-btn {
+  font-size: 32px;
+}
+.summary-toggle-btn:hover,
+.add-summary-btn:hover {
+  color: #fff;
+}
+.spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #888;
+  font-size: 24px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Summary Section (Unchanged) --- */
+.node-summary-container {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: #ccc;
+}
+.node-summary {
+  margin: 0;
+  font-size: 0.9em;
+  color: #ccc;
+  cursor: text;
+  white-space: pre-wrap;
+}
+.summary-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 5px;
+  font-size: 0.9em;
+  background-color: #333;
+  border: 1px solid #007aff;
+  color: #f0f0f0;
+  border-radius: 4px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+/* --- Context Menu (Unchanged) --- */
+.context-menu {
+  position: absolute;
+  background-color: #333;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.context-menu p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #aaa;
+  font-weight: bold;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #555;
+}
+.context-menu button {
+  background: #444;
+  color: #f0f0f0;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+.context-menu button:hover {
+  background-color: #007aff;
+}
+
+/* --- Loading (Unchanged) --- */
+.loading-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.5rem;
+  font-weight: 600;
+}

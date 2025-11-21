@@ -1,0 +1,111 @@
+import { useState, useEffect, useRef } from 'react';
+import { AiOutlineClose, AiOutlineSend } from 'react-icons/ai';
+import apiClient from '../api';
+import './AIChat.css';
+
+// We now get 'isOpen' and 'toggleChat' from the parent (App.jsx)
+function AIChat({ nodes, edges, onAiGeneratedMap, isOpen, toggleChat }) {
+  const [messages, setMessages] = useState([
+    { from: 'ai', text: 'Hello! How can I help you organize your mind?' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const chatBodyRef = useRef(null); // To auto-scroll
+
+  // Auto-scroll to bottom when new messages appear
+  useEffect(() => {
+    if (chatBodyRef.current) {
+      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  const handleSend = async () => {
+    if (input.trim() === '' || isLoading) return;
+
+    setIsLoading(true);
+    
+    const userMessage = { from: 'user', text: input };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput('');
+
+    const apiMessages = newMessages.map(msg => ({
+      from_user: msg.from === 'user',
+      text: msg.text
+    }));
+    
+    const cleanNodes = nodes.map(({ selected, dragging, ...node }) => node);
+
+    try {
+      const response = await apiClient.post('/ai/chat', {
+        messages: apiMessages,
+        nodes: cleanNodes,
+        edges: edges
+      });
+
+      const aiReply = { from: 'ai', text: response.data.reply };
+      setMessages([...newMessages, aiReply]);
+
+      if (response.data.newMapData && response.data.newMapData.nodes && response.data.newMapData.nodes.length > 0) {
+        onAiGeneratedMap(response.data.newMapData);
+      }
+
+    } catch (error) {
+      console.error("Error calling AI chat:", error);
+      const errorReply = { from: 'ai', text: 'Sorry, I ran into an error. Please try again.' };
+      setMessages([...newMessages, errorReply]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // The main div is now the chat window itself
+  // The 'open' class is controlled by the 'isOpen' prop
+  return (
+    <div className={`chat-window ${isOpen ? 'open' : ''}`}>
+      <div className="chat-header">
+        <h3>MindDock AI</h3>
+        {/* The close button now calls the function from App.jsx */}
+        <button onClick={toggleChat} className="chat-close-btn">
+          <AiOutlineClose />
+        </button>
+      </div>
+      
+      <div className="chat-body" ref={chatBodyRef}>
+        {messages.map((msg, index) => (
+          <div key={index} className={`chat-message ${msg.from}`}>
+            <p>{msg.text}</p>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="chat-message ai">
+            <p>...</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="chat-input-area">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask me anything..."
+          disabled={isLoading}
+        />
+        <button onClick={handleSend} className="chat-send-btn" disabled={isLoading}>
+          <AiOutlineSend />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default AIChat;

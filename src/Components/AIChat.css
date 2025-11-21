@@ -1,0 +1,118 @@
+/* This is the main sidebar container */
+.chat-window {
+  width: 370px;
+  height: 100vh;
+  background-color: #222; /* Slightly darker than nodes */
+  border-left: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+  
+  /* Slide-in/out animation */
+  position: fixed;
+  top: 0;
+  right: 0;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  box-shadow: -10px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.chat-window.open {
+  transform: translateX(0);
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #333;
+  border-bottom: 1px solid #555;
+  flex-shrink: 0; /* Prevents header from shrinking */
+}
+
+.chat-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.chat-close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 20px;
+  cursor: pointer;
+}
+.chat-close-btn:hover {
+  color: white;
+}
+
+.chat-body {
+  flex-grow: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-message {
+  padding: 10px 14px;
+  border-radius: 18px;
+  max-width: 80%;
+  line-height: 1.4;
+}
+
+.chat-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat-message.ai {
+  background-color: #3e3e3e;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-message.user {
+  background-color: #007aff;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-input-area {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #555;
+  background-color: #333;
+  flex-shrink: 0; /* Prevents input from shrinking */
+}
+
+.chat-input-area input {
+  flex-grow: 1;
+  background-color: #444;
+  border: 1px solid #666;
+  border-radius: 20px;
+  padding: 10px 15px;
+  color: white;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.chat-input-area input:focus {
+  border-color: #007aff;
+}
+
+.chat-send-btn {
+  background: none;
+  border: none;
+  color: #007aff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+}
+.chat-send-btn:hover {
+  color: white;
+}
