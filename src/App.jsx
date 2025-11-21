@@ -9,26 +9,26 @@ import {
   Background,
   applyNodeChanges,
   applyEdgeChanges,
-  MiniMap,
   useReactFlow,
   MarkerType,
   getNodesBounds,
   getViewportForBounds,
+  MiniMap,
 } from '@xyflow/react';
 
 import { toPng } from 'html-to-image';
-import { AiOutlineLoading, AiOutlineDownload, AiOutlineCalendar } from 'react-icons/ai'; // Added Calendar Icon
-import { BsChatDots } from 'react-icons/bs';
 
 import '@xyflow/react/dist/style.css';
 import './App.css';
 
 import apiClient from './api';
+// Ensure these match your folder name (Components with Capital C)
 import CustomNode from './Components/CustomNode';
 import ContextMenu from './Components/ContextMenu';
 import AIChat from './Components/AIChat';
 import Sidebar from './Components/Sidebar';
-import Timetable from './Components/Timetable'; // <-- NEW IMPORT
+import Timetable from './Components/Timetable';
+import Goals from './Components/Goals';
 import { useUndoRedo } from './hooks/useUndoRedo';
 
 let nodeId = 1000;
@@ -56,21 +56,26 @@ function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   
-  // --- UI State ---
+  // --- Multi-Map State ---
   const [maps, setMaps] = useState([]);
   const [currentMapId, setCurrentMapId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isTimetableOpen, setIsTimetableOpen] = useState(false); // <-- NEW
   
-  // --- Logic State ---
+  // --- UI State ---
   const [contextMenu, setContextMenu] = useState(null);
   const [aiLoadingNode, setAiLoadingNode] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // --- Feature Toggles ---
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isTimetableOpen, setIsTimetableOpen] = useState(false);
+  const [isGoalsOpen, setIsGoalsOpen] = useState(false);
+  
+  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
   const [clipboard, setClipboard] = useState(null);
-  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0); // To reload tasks when one is added
 
+  // --- Refs & Hooks ---
   const saveTimeout = useRef(null);
   const isLoaded = useRef(false);
   const reactFlowWrapper = useRef(null);
@@ -81,40 +86,44 @@ function App() {
   const addToTimetable = async (node) => {
     if (!node || !node.data.label) return;
     try {
-      // Create task in backend
       await apiClient.post('/tasks/', {
         title: node.data.label,
         description: node.data.summary || "Added from Mind Map",
-        due_date: new Date().toISOString() // Today
+        due_date: new Date().toISOString()
       });
-      
-      // Open the timetable and refresh the list
       setIsTimetableOpen(true);
       setTaskRefreshTrigger(prev => prev + 1);
-      
     } catch (error) {
       console.error("Failed to add task:", error);
       alert("Failed to add task. Check console.");
     }
   };
 
-  // --- EXISTING FEATURES (Export, Copy/Paste, Undo/Redo, Load/Save) ---
-  // ... (Keep downloadImage, handleCopy, handlePaste, handleKeyDown from previous code) ...
+  // --- EXPORT IMAGE ---
   const downloadImage = async () => {
     await rfInstance.fitView({ padding: 0.4 });
     setTimeout(() => {
       const viewport = reactFlowWrapper.current.querySelector('.react-flow__viewport');
       if (!viewport) return;
       toPng(viewport, {
-        backgroundColor: '#1a1a1a', width: viewport.getBoundingClientRect().width, height: viewport.getBoundingClientRect().height, pixelRatio: 2, style: { transform: `translate(0, 0)` }
+        backgroundColor: '#1a1a1a',
+        width: viewport.getBoundingClientRect().width,
+        height: viewport.getBoundingClientRect().height,
+        pixelRatio: 2,
+        style: { transform: `translate(0, 0)` }
       }).then((dataUrl) => {
-        const a = document.createElement('a'); a.setAttribute('download', `minddock-map-${Date.now()}.png`); a.setAttribute('href', dataUrl); a.click();
+        const a = document.createElement('a');
+        a.setAttribute('download', `minddock-map-${Date.now()}.png`);
+        a.setAttribute('href', dataUrl);
+        a.click();
       });
     }, 500);
   };
 
+  // --- COPY & PASTE ---
   const handleCopy = useCallback(() => {
-    const selectedNodes = nodes.filter((n) => n.selected); const selectedEdges = edges.filter((e) => e.selected);
+    const selectedNodes = nodes.filter((n) => n.selected);
+    const selectedEdges = edges.filter((e) => e.selected);
     if (selectedNodes.length > 0) setClipboard({ nodes: selectedNodes, edges: selectedEdges });
   }, [nodes, edges]);
 
@@ -128,12 +137,21 @@ function App() {
     const offsetX = centerX - (copiedBounds.x + copiedBounds.width / 2);
     const offsetY = centerY - (copiedBounds.y + copiedBounds.height / 2);
     const idMap = new Map(); const newNodes = []; const newEdges = [];
-    clipboard.nodes.forEach((node) => { const newId = `${nodeId++}`; idMap.set(node.id, newId); newNodes.push({ ...node, id: newId, selected: true, position: { x: node.position.x + offsetX, y: node.position.y + offsetY }, data: { ...node.data } }); });
-    clipboard.edges.forEach((edge) => { const newSource = idMap.get(edge.source); const newTarget = idMap.get(edge.target); if (newSource && newTarget) { newEdges.push({ ...edge, id: `e-${newSource}-${newTarget}-${Date.now()}`, source: newSource, target: newTarget, selected: true }); } });
+    clipboard.nodes.forEach((node) => { 
+      const newId = `${nodeId++}`; 
+      idMap.set(node.id, newId); 
+      newNodes.push({ ...node, id: newId, selected: true, position: { x: node.position.x + offsetX, y: node.position.y + offsetY }, data: { ...node.data } }); 
+    });
+    clipboard.edges.forEach((edge) => { 
+      const newSource = idMap.get(edge.source); 
+      const newTarget = idMap.get(edge.target); 
+      if (newSource && newTarget) { newEdges.push({ ...edge, id: `e-${newSource}-${newTarget}-${Date.now()}`, source: newSource, target: newTarget, selected: true }); } 
+    });
     setNodes([...nodes.map(n => ({ ...n, selected: false })), ...newNodes]);
     setEdges([...edges.map(e => ({ ...e, selected: false })), ...newEdges]);
   }, [clipboard, nodes, edges, rfInstance, takeSnapshot]);
 
+  // --- KEYBOARD SHORTCUTS ---
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
@@ -146,6 +164,7 @@ function App() {
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nodes, edges, undo, redo, handleCopy, handlePaste]);
 
+  // --- DATA LOADING ---
   useEffect(() => { fetchMaps(); }, []);
   const fetchMaps = async () => { 
     try { setIsLoading(true); const response = await apiClient.get('/map/'); const mapList = response.data; setMaps(mapList);
@@ -171,6 +190,8 @@ function App() {
     if(currentMapId===id && rem.length>0) loadMap(rem[0].id); else if(rem.length===0) createMap("New Map"); }
     catch(e) { console.error(e); }
   };
+  
+  // --- AUTO SAVE ---
   useEffect(() => {
     if (!isLoaded.current || !currentMapId) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -186,7 +207,7 @@ function App() {
     }, 1500);
   }, [nodes, edges, currentMapId, maps]);
 
-  // ... (Standard Handlers) ...
+  // --- HANDLERS ---
   const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes]);
   const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
@@ -197,8 +218,8 @@ function App() {
     setNodes((nds) => nds.concat(newNode)); return newNode;
   }, [setNodes, nodes, edges, takeSnapshot]);
 
-  // ... (AI & Logic Handlers) ...
-  const generateRoadmap = useCallback(async (sourceNode) => { /* ... code from prev step ... */ 
+  // --- AI LOGIC ---
+  const generateRoadmap = useCallback(async (sourceNode) => {
     if (!sourceNode || !sourceNode.data || !sourceNode.data.label) return;
     takeSnapshot(nodes, edges); setAiLoadingNode(sourceNode.id);
     try {
@@ -217,7 +238,7 @@ function App() {
     } catch (error) { console.error(error); } finally { setAiLoadingNode(null); }
   }, [rfInstance, setNodes, setEdges, nodes, edges, takeSnapshot]);
 
-  const onAiGeneratedMap = useCallback((newMapData) => { /* ... code from prev step ... */ 
+  const onAiGeneratedMap = useCallback((newMapData) => {
     takeSnapshot(nodes, edges);
     const { x, y, zoom } = rfInstance.getViewport();
     const centerX = -x / zoom + (window.innerWidth / 2) / zoom || 0;
@@ -235,7 +256,7 @@ function App() {
     setTimeout(() => rfInstance.fitView({ duration: 500, nodes: newNodes }), 100);
   }, [rfInstance, setNodes, setEdges, nodes, edges, takeSnapshot]);
 
-  const selectConnectedGroup = useCallback((startNodeId) => { /* ... code from prev step ... */ 
+  const selectConnectedGroup = useCallback((startNodeId) => {
     const connectedNodeIds = new Set(); const connectedEdgeIds = new Set(); const queue = [startNodeId]; connectedNodeIds.add(startNodeId);
     while (queue.length > 0) {
       const curr = queue.shift();
@@ -250,17 +271,14 @@ function App() {
     setEdges((eds) => eds.map((e) => ({ ...e, selected: connectedEdgeIds.has(e.id) })));
   }, [nodes, edges, setNodes, setEdges]);
 
+  // --- MENUS ---
   const handlePaneClick = useCallback(() => setContextMenu(null), []);
   const onNodeContextMenu = useCallback((event, node) => { event.preventDefault(); setContextMenu({ id: node.id, node: node, type: 'node', top: event.clientY, left: event.clientX }); }, []);
   const onEdgeContextMenu = useCallback((event, edge) => { event.preventDefault(); setContextMenu({ id: edge.id, type: 'edge', top: event.clientY, left: event.clientX }); }, []);
-  
   const handleMenuAction = useCallback((action, payload) => {
     if (['setNodeColor', 'setEdgeStyle'].includes(action)) takeSnapshot(nodes, edges);
     
-    // --- NEW: Handle Add to Timetable ---
-    if (action === 'addToTimetable') {
-        addToTimetable(contextMenu.node);
-    }
+    if (action === 'addToTimetable') addToTimetable(contextMenu.node);
     else if (action === 'generateRoadmap') generateRoadmap(contextMenu.node);
     else if (action === 'selectGroup') selectConnectedGroup(contextMenu.id);
     else if (action === 'setNodeColor') setNodes((nds) => nds.map((n) => n.id === contextMenu.id ? { ...n, data: { ...n.data, style: { backgroundColor: payload.background, color: payload.text } } } : n));
@@ -273,30 +291,26 @@ function App() {
   // --- RENDER ---
   return (
     <div className={`app-container ${isChatOpen ? 'chat-open' : ''} ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-      
-      <Sidebar 
-        maps={maps}
-        currentMapId={currentMapId}
-        onSelectMap={loadMap}
-        onCreateMap={createMap}
-        onDeleteMap={deleteMap}
-        isOpen={isSidebarOpen}
-        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-      />
-
+      <Sidebar maps={maps} currentMapId={currentMapId} onSelectMap={loadMap} onCreateMap={createMap} onDeleteMap={deleteMap} isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
       <div className="react-flow-wrapper" ref={reactFlowWrapper}>
         <button onClick={() => addNode({})} className="add-node-btn" style={{ left: isSidebarOpen ? '270px' : '70px', transition: 'left 0.3s' }}>+ Add Note</button>
         
         <div className="top-right-ui">
           <div className="save-indicator">{isSaving ? "Saving..." : "Saved"}</div>
           
-          {/* --- Timetable Toggle --- */}
-          <button onClick={() => setIsTimetableOpen(!isTimetableOpen)} className="chat-toggle-btn" title="Daily Timetable">
-            <AiOutlineCalendar />
+          {/* --- VISIBLE BUTTONS USING EMOJIS --- */}
+          <button onClick={() => setIsGoalsOpen(!isGoalsOpen)} className="chat-toggle-btn" title="Goals Tracker" style={{fontSize:'1.2rem'}}>
+            🏆
           </button>
-
-          <button onClick={downloadImage} className="chat-toggle-btn" title="Download Image"><AiOutlineDownload /></button>
-          <button onClick={() => { setIsChatOpen(!isChatOpen); setTimeout(() => window.dispatchEvent(new Event('resize')), 300); }} className="chat-toggle-btn" title="AI Chat"><BsChatDots /></button>
+          <button onClick={() => setIsTimetableOpen(!isTimetableOpen)} className="chat-toggle-btn" title="Daily Timetable" style={{fontSize:'1.2rem'}}>
+            📅
+          </button>
+          <button onClick={downloadImage} className="chat-toggle-btn" title="Download Image" style={{fontSize:'1.2rem'}}>
+            💾
+          </button>
+          <button onClick={() => { setIsChatOpen(!isChatOpen); setTimeout(() => window.dispatchEvent(new Event('resize')), 300); }} className="chat-toggle-btn" title="AI Chat" style={{fontSize:'1.2rem'}}>
+            🤖
+          </button>
         </div>
 
         {currentMapId ? (
@@ -306,21 +320,7 @@ function App() {
           >
             <Background />
             <Controls />
-            <MiniMap 
-              nodeStrokeColor={(n) => {
-                if (n.type === 'input') return '#0041d0';
-                if (n.type === 'output') return '#ff0072';
-                if (n.type === 'default') return '#1a192b';
-                return '#eee';
-              }}
-              nodeColor={(n) => {
-                if (n.style?.backgroundColor) return n.style.backgroundColor;
-                return '#fff';
-              }}
-              style={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
-              zoomable
-              pannable
-            />
+            <MiniMap nodeColor={(n) => n.style?.backgroundColor || '#fff'} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} zoomable pannable />
           </ReactFlow>
         ) : (
           <div className="loading-screen">
@@ -333,12 +333,9 @@ function App() {
       
       <AIChat nodes={nodes} edges={edges} onAiGeneratedMap={onAiGeneratedMap} isOpen={isChatOpen} toggleChat={() => setIsChatOpen(!isChatOpen)} />
       
-      {/* --- TIMETABLE --- */}
-      <Timetable 
-        isOpen={isTimetableOpen} 
-        toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)} 
-        refreshTrigger={taskRefreshTrigger}
-      />
+      {/* --- SIDEBARS --- */}
+      <Timetable isOpen={isTimetableOpen} toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)} refreshTrigger={taskRefreshTrigger} />
+      <Goals isOpen={isGoalsOpen} toggleGoals={() => setIsGoalsOpen(!isGoalsOpen)} />
     </div>
   );
 }
