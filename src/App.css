@@ -1,26 +1,26 @@
 /* --- THEME VARIABLES --- */
 :root {
   /* DARK MODE (Default) */
-  --bg-app: #1a1a1a;
-  --bg-sidebar: #1e1e1e;
-  --bg-panel: #2a2a2a;
-  --bg-input: #333;
-  --border-color: #444;
-  --text-main: #f0f0f0;
-  --text-muted: #aaa;
+  --bg-app: #121212;
+  --bg-panel: #1e1e1e;
+  --bg-sidebar: #181818;
+  --bg-input: #2a2a2a;
+  --border-color: #333;
+  --text-main: #e0e0e0;
+  --text-muted: #888;
   --accent-color: #007aff;
-  --accent-hover: #0056b3;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  --accent-hover: #0062cc;
+  --shadow-color: rgba(0, 0, 0, 0.5);
   --node-bg: #2a2a2a;
-  --node-border: #555;
+  --node-border: #444;
 }
 
-/* LIGHT MODE OVERRIDES */
+/* LIGHT MODE */
 body.light-mode {
   --bg-app: #f4f4f9;
-  --bg-sidebar: #ffffff;
   --bg-panel: #ffffff;
-  --bg-input: #f0f0f0;
+  --bg-sidebar: #f9fafb;
+  --bg-input: #eef0f2;
   --border-color: #ddd;
   --text-main: #1a1a1a;
   --text-muted: #666;
@@ -31,283 +31,157 @@ body.light-mode {
   --node-border: #ccc;
 }
 
-/* --- Global Styles --- */
+/* --- GLOBAL --- */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg-app);
   color: var(--text-main);
   margin: 0;
   padding: 0;
   overflow: hidden;
-  transition: background-color 0.3s, color 0.3s;
+  user-select: none; /* Prevents accidental text selection while dragging */
 }
 
 .app-container {
   display: flex;
   width: 100vw;
   height: 100vh;
-  transition: margin-right 0.3s ease-in-out;
+  flex-direction: column; /* TopBar is top, content is below */
 }
 
 .react-flow-wrapper {
   flex-grow: 1;
-  height: 100%;
   position: relative;
-  transition: width 0.3s ease-in-out;
+  width: 100%;
+  height: 100%;
 }
 
-/* --- React Flow Canvas --- */
-.react-flow__background {
-  background-color: var(--bg-app) !important;
-}
-.react-flow__controls {
-  background-color: var(--bg-panel) !important;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px var(--shadow-color);
-}
-.react-flow__controls button {
-  background-color: var(--bg-panel) !important;
-  color: var(--text-main) !important;
-  border-bottom: 1px solid var(--border-color) !important;
-}
-.react-flow__controls button:hover {
-  background-color: var(--bg-input) !important;
-}
-
-/* --- Top-Right UI --- */
-.top-right-ui {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 10;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.save-indicator {
-  background-color: var(--bg-panel);
-  padding: 8px 16px;
-  border-radius: 8px;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  box-shadow: 0 2px 8px var(--shadow-color);
-  border: 1px solid var(--border-color);
-}
-
-.chat-toggle-btn {
-  background-color: var(--bg-panel);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 22px;
-  cursor: pointer;
-  box-shadow: 0 2px 8px var(--shadow-color);
-  transition: all 0.2s ease;
-}
-.chat-toggle-btn:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-}
-
-/* --- Add Node Button --- */
-.add-node-btn {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 10;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px var(--shadow-color);
-}
-.add-node-btn:hover {
-  background-color: var(--accent-hover);
-}
-
-/* --- Custom Node --- */
+/* --- CUSTOM NODE STYLING (FIXED) --- */
 .custom-node {
   background-color: var(--node-bg);
   color: var(--text-main);
   border: 1px solid var(--node-border);
-  border-radius: 8px;
-  padding: 10px 15px;
-  min-width: 180px;
-  font-size: 16px;
-  transition: background-color 0.2s, border 0.2s;
-  box-shadow: 0 2px 8px var(--shadow-color);
+  border-radius: 12px; /* ROUNDED CORNERS */
+  padding: 12px 20px;
+  min-width: 150px;
+  text-align: center;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   position: relative;
 }
-.react-flow__node-mindNode.selected .custom-node {
-  border: 1px solid var(--accent-color);
-  box-shadow: 0 0 10px 1px var(--accent-color);
+
+/* Highlight selected node */
+.react-flow__node.selected .custom-node {
+  border: 2px solid var(--accent-color);
+  box-shadow: 0 0 15px rgba(0, 122, 255, 0.4);
 }
-.node-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 5px;
+
+.node-label {
+  font-weight: 600;
+  font-size: 1rem;
+  pointer-events: none; /* Let clicks pass through */
 }
-.node-label { padding: 5px 0; font-weight: bold; }
+
 .node-input {
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: bold;
   width: 100%;
-  color: var(--text-main);
-  background-color: transparent;
+  text-align: center;
+  background: transparent;
   border: none;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 1rem;
   outline: none;
-  padding: 5px 0;
-  margin: 0;
-  box-sizing: border-box;
 }
 
-/* --- Summary & Controls --- */
+/* --- SUMMARY CONTROLS (Eye/Plus) --- */
 .summary-controls {
-  position: absolute; z-index: 10; bottom: -14px; right: -14px; display: flex; align-items: center; gap: 5px;
+  position: absolute;
+  bottom: -12px;
+  right: -12px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 2px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 5px var(--shadow-color);
+  z-index: 10;
 }
+
 .summary-toggle-btn, .add-summary-btn {
-  background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s; display: flex; justify-content: center; align-items: center;
-}
-.add-summary-btn { font-size: 32px; }
-.summary-toggle-btn:hover, .add-summary-btn:hover { color: var(--accent-color); }
-.spinner { color: var(--text-muted); animation: spin 1s linear infinite; font-size: 24px; display: flex; }
-
-.node-summary-container {
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 8px 10px;
-  margin-top: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  box-shadow: 0 2px 8px var(--shadow-color);
+  background: transparent;
+  border: none;
   color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
 }
-.node-summary { margin: 0; font-size: 0.9em; cursor: text; white-space: pre-wrap; }
-.summary-textarea {
-  width: 100%; min-height: 60px; padding: 5px; font-size: 0.9em;
-  background-color: var(--bg-input); border: 1px solid var(--accent-color);
-  color: var(--text-main); border-radius: 4px; resize: vertical;
-}
-
-/* --- SIDEBARS (Maps, Goals, Timetable) --- */
-.sidebar, .goals-sidebar, .timetable-sidebar {
-  background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
-  border-left: 1px solid var(--border-color);
-  color: var(--text-main);
-  box-shadow: 4px 0 15px var(--shadow-color);
+.summary-toggle-btn:hover, .add-summary-btn:hover {
+  color: var(--accent-color);
 }
 
-.sidebar-header, .goals-header, .timetable-header {
-  background-color: var(--bg-panel);
-  border-bottom: 1px solid var(--border-color);
-}
-.sidebar-header h3, .goals-header h3, .timetable-header h3 { color: var(--text-main); }
-.close-btn { color: var(--text-muted); }
-.close-btn:hover { color: var(--text-main); }
-
-.sidebar-footer, .create-goal-form {
-  background-color: var(--bg-panel);
-  border-top: 1px solid var(--border-color);
-}
-
-/* List Items */
-.map-item, .goal-card, .task-item {
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-}
-.map-item:hover, .task-item:hover { background-color: var(--bg-input); }
-.map-item.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
-
-/* Inputs in Sidebars */
-.create-map-form input, .create-goal-form input {
-  background-color: var(--bg-input);
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-}
-.create-map-btn {
-  background-color: var(--bg-input);
-  color: var(--text-main);
-}
-.create-map-btn:hover { background-color: var(--border-color); }
-
-/* --- CHAT WINDOW --- */
-.chat-window {
-  background-color: var(--bg-sidebar);
-  border-left: 1px solid var(--border-color);
-  box-shadow: -10px 0 20px var(--shadow-color);
-}
-.chat-header {
-  background-color: var(--bg-panel);
-  border-bottom: 1px solid var(--border-color);
-}
-.chat-input-area {
-  background-color: var(--bg-panel);
-  border-top: 1px solid var(--border-color);
-}
-.chat-input-area input {
-  background-color: var(--bg-input);
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-}
-.chat-message.ai { background-color: var(--bg-input); color: var(--text-main); }
-.chat-message.user { background-color: var(--accent-color); color: white; }
-
-/* --- Context Menu (FIXED) --- */
+/* --- CONTEXT MENU (FIXED Z-INDEX) --- */
 .context-menu {
   position: absolute;
   background-color: var(--bg-panel);
-  border: 1px solid var(--accent-color); /* High visibility border */
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 10px;
-  z-index: 999999; /* Force on top */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  z-index: 99999; /* FORCE TOP */
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
-  gap: 5px;
   min-width: 180px;
-  pointer-events: auto;
 }
-.context-menu p { 
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: bold;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--border-color);
-}
+
 .context-menu button {
-  background: var(--bg-input);
-  color: var(--text-main);
+  background: transparent;
   border: none;
+  color: var(--text-main);
   padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
   text-align: left;
-  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
   transition: background 0.2s;
 }
-.context-menu button:hover { background-color: var(--accent-color); color: white; }
 
-/* --- Loading --- */
-.loading-screen {
-  display: flex; justify-content: center; align-items: center; height: 100vh;
-  font-size: 1.5rem; font-weight: 600; color: var(--text-main);
+.context-menu button:hover {
+  background-color: var(--accent-color);
+  color: white;
 }
 
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* --- LOADING --- */
+.loading-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+}
+
+.add-node-btn {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-weight: bold;
+  box-shadow: 0 5px 15px var(--shadow-color);
+  z-index: 50;
+  cursor: pointer;
+}

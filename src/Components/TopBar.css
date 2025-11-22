@@ -1,0 +1,153 @@
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 1000;
+  box-shadow: 0 2px 10px var(--shadow-color);
+  box-sizing: border-box;
+  backdrop-filter: blur(10px);
+}
+
+.top-bar-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.top-bar-section.left {
+  min-width: 200px;
+}
+
+.app-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--accent-color);
+  letter-spacing: -0.5px;
+}
+
+.divider {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  margin: 0 5px;
+}
+
+.map-title {
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* Tool Buttons (Center) */
+.tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tool-btn:hover {
+  background-color: var(--bg-input);
+  color: var(--text-main);
+}
+
+.tool-btn:active {
+  background-color: var(--bg-input);
+  border-color: var(--border-color);
+}
+
+/* Icon Buttons (Left/Right) */
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+}
+
+.icon-btn:hover {
+  color: var(--text-main);
+  background-color: var(--bg-input);
+}
+
+.ai-btn {
+  color: var(--accent-color);
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.ai-btn:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .top-bar-section.center {
+    display: none; /* Hide text buttons on mobile, move to sidebar if needed */
+  }
+  .map-title {
+    display: none;
+  }
+}
+/* ... existing styles ... */
+
+.divider-vertical {
+  width: 1px;
+  height: 24px;
+  background-color: var(--border-color);
+  margin: 0 10px;
+}
+
+/* Special styling for AI buttons */
+.tool-btn.ai-tool {
+  color: var(--accent-color);
+}
+
+.tool-btn.ai-tool:hover {
+  background-color: rgba(0, 122, 255, 0.1); /* Subtle blue tint */
+}
+
+/* Notification button logic */
+.notification-btn {
+  width: 40px; /* Square-ish icon button */
+  padding: 0;
+  justify-content: center;
+}
+
+/* Make the center section scrollable on very small screens if needed */
+@media (max-width: 900px) {
+  .top-bar-section.center {
+    gap: 5px;
+  }
+  .tool-btn {
+    font-size: 0; /* Hide text on tablets */
+    padding: 10px;
+  }
+  .tool-btn svg {
+    font-size: 20px; /* Keep icons big */
+  }
+}

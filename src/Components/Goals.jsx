@@ -6,7 +6,6 @@ import './Goals.css';
 export default function Goals({ isOpen, toggleGoals }) {
   const [goals, setGoals] = useState([]);
   const [newGoalTitle, setNewGoalTitle] = useState("");
-  const [newGoalDate, setNewGoalDate] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -29,12 +28,11 @@ export default function Goals({ isOpen, toggleGoals }) {
     try {
       const response = await apiClient.post('/goals/', {
         title: newGoalTitle,
-        target_date: newGoalDate ? new Date(newGoalDate).toISOString() : null,
+        target_date: null,
         progress_percentage: 0
       });
       setGoals([...goals, response.data]);
       setNewGoalTitle("");
-      setNewGoalDate("");
       setIsCreating(false);
     } catch (error) {
       console.error("Error creating goal", error);
@@ -52,92 +50,73 @@ export default function Goals({ isOpen, toggleGoals }) {
   };
 
   const updateProgress = async (goal, newProgress) => {
-    // Clamp between 0 and 100
     const progress = Math.min(100, Math.max(0, newProgress));
-    
-    // Optimistic update
     setGoals(goals.map(g => g.id === goal.id ? { ...g, progress_percentage: progress } : g));
-
     try {
       await apiClient.put(`/goals/${goal.id}/progress?progress=${progress}`);
-    } catch (error) {
-      console.error("Update failed", error);
-      fetchGoals(); // Revert on fail
-    }
+    } catch (error) { fetchGoals(); }
   };
 
   return (
-    <div className={`goals-sidebar ${isOpen ? 'open' : ''}`}>
-      <div className="goals-header">
-        <h3>🎯 Goals Tracker</h3>
-        <button onClick={toggleGoals} className="close-btn">×</button>
-      </div>
-
-      <div className="goals-list">
-        {goals.length === 0 && !isCreating ? (
-          <div className="empty-state">
-            <AiOutlineTrophy style={{ fontSize: 40, marginBottom: 10 }} />
-            <p>No active goals.</p>
-            <button className="start-goal-btn" onClick={() => setIsCreating(true)}>Set a Goal</button>
-          </div>
+    <div className="goals-sidebar">
+      {/* --- HEADER & NEW BUTTON --- */}
+      <div className="goals-header-container">
+        <div className="goals-header">
+           <h3>🎯 Goals</h3>
+           {/* Only show close button if NOT inside the unified panel (optional) */}
+           {toggleGoals && <button onClick={toggleGoals} className="close-btn">×</button>}
+        </div>
+        
+        {!isCreating ? (
+          <button className="new-goal-full-btn" onClick={() => setIsCreating(true)}>
+            <AiOutlinePlus /> New Goal
+          </button>
         ) : (
-          goals.map(goal => (
-            <div key={goal.id} className="goal-card">
-              <div className="goal-top">
-                <span className="goal-title">{goal.title}</span>
-                <button onClick={() => deleteGoal(goal.id)} className="delete-goal-btn">
-                  <AiOutlineDelete />
-                </button>
-              </div>
-              
-              {goal.target_date && (
-                <small className="goal-date">Target: {new Date(goal.target_date).toLocaleDateString()}</small>
-              )}
-
-              <div className="progress-section">
-                <div className="progress-bar-bg">
-                  <div 
-                    className="progress-bar-fill" 
-                    style={{ width: `${goal.progress_percentage}%` }}
-                  ></div>
-                </div>
-                <div className="progress-controls">
-                  <button onClick={() => updateProgress(goal, goal.progress_percentage - 10)}>-</button>
-                  <span>{goal.progress_percentage}%</span>
-                  <button onClick={() => updateProgress(goal, goal.progress_percentage + 10)}>+</button>
-                </div>
-              </div>
+          <form onSubmit={createGoal} className="create-goal-inline">
+            <input 
+              autoFocus
+              type="text" 
+              placeholder="Goal Title..." 
+              value={newGoalTitle}
+              onChange={(e) => setNewGoalTitle(e.target.value)}
+            />
+            <div className="inline-actions">
+              <button type="button" onClick={() => setIsCreating(false)}>Cancel</button>
+              <button type="submit" className="save-btn">Save</button>
             </div>
-          ))
+          </form>
         )}
       </div>
 
-      {isCreating && (
-        <form onSubmit={createGoal} className="create-goal-form">
-          <input 
-            type="text" 
-            placeholder="Goal Title (e.g. Learn Python)" 
-            value={newGoalTitle}
-            onChange={(e) => setNewGoalTitle(e.target.value)}
-            autoFocus
-          />
-          <input 
-            type="date" 
-            value={newGoalDate}
-            onChange={(e) => setNewGoalDate(e.target.value)}
-          />
-          <div className="form-actions">
-            <button type="button" onClick={() => setIsCreating(false)}>Cancel</button>
-            <button type="submit" className="save-btn">Save Goal</button>
+      <div className="goals-list">
+        {goals.length === 0 && !isCreating && (
+          <div className="empty-state">
+            <p>No active goals.</p>
           </div>
-        </form>
-      )}
+        )}
 
-      {!isCreating && goals.length > 0 && (
-        <button className="fab-add-goal" onClick={() => setIsCreating(true)}>
-          <AiOutlinePlus />
-        </button>
-      )}
+        {goals.map(goal => (
+          <div key={goal.id} className="goal-card">
+            <div className="goal-top">
+              <span className="goal-title">{goal.title}</span>
+              <button onClick={() => deleteGoal(goal.id)} className="delete-goal-btn">
+                <AiOutlineDelete />
+              </button>
+            </div>
+            
+            <div className="progress-section">
+              <div className="progress-bar-bg">
+                <div className="progress-bar-fill" style={{ width: `${goal.progress_percentage}%` }}></div>
+              </div>
+              <div className="progress-controls">
+                <button onClick={() => updateProgress(goal, goal.progress_percentage - 10)}>-</button>
+                <span>{goal.progress_percentage}%</span>
+                <button onClick={() => updateProgress(goal, goal.progress_percentage + 10)}>+</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

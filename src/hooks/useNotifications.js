@@ -1,19 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export const useNotifications = (tasks) => {
   const notifiedTaskIds = useRef(new Set());
+  const [permission, setPermission] = useState(Notification.permission);
 
-  // 1. Request Permission on Load
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission !== 'granted') {
-      Notification.requestPermission();
+  // Function to manually request permission (Call this from a button click)
+  const requestPermission = () => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then((perm) => {
+        setPermission(perm);
+      });
     }
-  }, []);
+  };
 
-  // 2. Check for due tasks every 30 seconds
+  // Check for due tasks every 30 seconds
   useEffect(() => {
     const checkTasks = () => {
-      if (Notification.permission !== 'granted') return;
+      if (permission !== 'granted') return;
 
       const now = new Date();
       
@@ -24,8 +27,6 @@ export const useNotifications = (tasks) => {
         const timeDiff = dueDate - now;
 
         // Notify if due within the next 5 minutes (and hasn't been notified yet)
-        // timeDiff > 0 means it's in the future
-        // timeDiff < 300000 means it's less than 5 mins away
         if (timeDiff > 0 && timeDiff < 300000 && !notifiedTaskIds.current.has(task.id)) {
           sendNotification(task);
           notifiedTaskIds.current.add(task.id);
@@ -35,16 +36,13 @@ export const useNotifications = (tasks) => {
 
     const interval = setInterval(checkTasks, 30000); // Check every 30s
     return () => clearInterval(interval);
-  }, [tasks]);
+  }, [tasks, permission]);
 
   const sendNotification = (task) => {
-    // Visual Notification
     new Notification("MindDock Reminder ⏰", {
       body: `Upcoming: ${task.title}`,
-      icon: '/vite.svg' // Uses default Vite icon, can be changed
+      icon: '/vite.svg'
     });
-
-    // Audio Alert (Simple Beep)
     playNotificationSound();
   };
 
@@ -52,18 +50,14 @@ export const useNotifications = (tasks) => {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
-      
       const ctx = new AudioContext();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-
       osc.connect(gain);
       gain.connect(ctx.destination);
-
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
       gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      
       osc.start();
       gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
       osc.stop(ctx.currentTime + 0.5);
@@ -71,4 +65,6 @@ export const useNotifications = (tasks) => {
       console.error("Audio play failed", e);
     }
   };
+
+  return { requestPermission, permission };
 };

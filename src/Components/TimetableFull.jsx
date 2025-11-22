@@ -10,11 +10,9 @@ const ScheduleNode = ({ id, data }) => {
   const [label, setLabel] = useState(data.label);
   const [description, setDescription] = useState(data.description);
   
-  // Helper to format Date for the datetime-local input (YYYY-MM-DDTHH:mm)
   const formatForInput = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    // Adjust for local timezone offset to ensure the picker shows the correct time
     const offset = date.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(date - offset)).toISOString().slice(0, 16);
     return localISOTime;
@@ -24,7 +22,6 @@ const ScheduleNode = ({ id, data }) => {
 
   const onSave = (e) => {
     e.stopPropagation();
-    // Send the full ISO string back
     data.onSave(id, { label, description, due_date: new Date(dateTime).toISOString() });
     setIsEditing(false);
   };
@@ -33,7 +30,6 @@ const ScheduleNode = ({ id, data }) => {
     return (
       <div className="schedule-node editing">
         <div className="edit-header">
-          {/* DATE AND TIME PICKER */}
           <input 
             type="datetime-local" 
             value={dateTime} 
@@ -62,7 +58,6 @@ const ScheduleNode = ({ id, data }) => {
   return (
     <div className="schedule-node" onClick={() => setIsEditing(true)}>
       <div className="schedule-time">
-        {/* Display Day and Time nicely */}
         <span style={{fontSize:'1.2em', fontWeight:'bold'}}>
             {new Date(data.dueDate).getDate()}
         </span>
@@ -115,21 +110,17 @@ export default function TimetableFull({ isOpen, onClose }) {
       ...originalTask,
       title: newData.label,
       description: newData.description,
-      due_date: newData.due_date // Use the new full date
+      due_date: newData.due_date
     };
 
     try {
-        // In a real app, you would call PUT /tasks/{id} here.
-        // Since we might not have that specific endpoint ready, we will verify logic:
-        // For now, we assume optimistic update works for the UI flow.
-        console.log("Saving Task:", updatedTask);
-        
+        // Optimistic update for demo purposes
         const newTasks = tasks.map(t => t.id === taskId ? updatedTask : t);
-        // Re-sort based on the new date!
         newTasks.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-        
         setTasks(newTasks);
         generateVisualSchedule(newTasks);
+        
+        // In a real app: await apiClient.put(`/tasks/${taskId}`, updatedTask);
     } catch (error) {
       console.error("Update failed", error);
     }
@@ -147,7 +138,6 @@ export default function TimetableFull({ isOpen, onClose }) {
       const dateObj = new Date(task.due_date);
       const dateDisplay = dateObj.toLocaleDateString();
 
-      // Add visual gap between different days
       if (currentDateStr && currentDateStr !== dateDisplay) {
         y += 80; 
       }
@@ -160,7 +150,7 @@ export default function TimetableFull({ isOpen, onClose }) {
         data: { 
           label: task.title, 
           description: task.description,
-          dueDate: task.due_date, // Pass full date string
+          dueDate: task.due_date, 
           onSave: handleTaskUpdate
         }
       });
