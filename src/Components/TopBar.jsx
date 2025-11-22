@@ -10,13 +10,14 @@ import {
   AiOutlineBell,
   AiFillBell,
   AiOutlineBulb,
-  AiOutlineHome // <-- Import Home Icon
+  AiOutlineHome,
+  AiOutlinePartition // <-- NEW ICON for Maps
 } from 'react-icons/ai';
 import './TopBar.css';
 
 export default function TopBar({ 
   onToggleMaps, 
-  onGoHome, // <-- New Prop
+  onGoHome, 
   onToggleTasks, 
   onToggleGoals, 
   onToggleJournal,
@@ -32,8 +33,9 @@ export default function TopBar({
 }) {
   return (
     <div className="top-bar">
-      {/* LEFT: Navigation & Title */}
+      {/* LEFT: App Title */}
       <div className="top-bar-section left">
+        {/* We keep this as a visual anchor or secondary toggle */}
         <button className="icon-btn main-menu-btn" onClick={onToggleMaps} title="My Maps">
           <AiOutlineMenu />
         </button>
@@ -44,10 +46,15 @@ export default function TopBar({
 
       {/* CENTER: Core Tools */}
       <div className="top-bar-section center">
-        {/* --- NEW HOME BUTTON --- */}
         <button className="tool-btn" onClick={onGoHome} title="Dashboard">
           <AiOutlineHome /> Home
         </button>
+
+        {/* --- NEW MAPS BUTTON --- */}
+        <button className="tool-btn" onClick={onToggleMaps} title="Open Map List">
+          <AiOutlinePartition /> Maps
+        </button>
+        {/* ----------------------- */}
 
         <button className="tool-btn" onClick={onToggleTasks}>
           <AiOutlineCalendar /> Tasks
@@ -82,7 +89,6 @@ export default function TopBar({
           <AiOutlineSearch />
         </button>
         
-        {/* Show Export only if a map is open (title is not Dashboard) */}
         {currentMapTitle !== "Dashboard" && (
             <button className="icon-btn" onClick={onExport} title="Export Image">
             <AiOutlineDownload />
