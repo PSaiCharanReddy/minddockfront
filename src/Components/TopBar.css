@@ -1,3 +1,4 @@
+/* --- DESKTOP LAYOUT (Default) --- */
 .top-bar {
   position: fixed;
   top: 0;
@@ -9,12 +10,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 15px; /* Reduced padding slightly */
+  padding: 0 20px;
   z-index: 1000;
   box-shadow: 0 2px 10px var(--shadow-color);
-  box-sizing: border-box; /* Critical for preventing overflow */
+  box-sizing: border-box;
   backdrop-filter: blur(10px);
-  white-space: nowrap; /* Prevent wrapping */
 }
 
 .top-bar-section {
@@ -23,23 +23,9 @@
   gap: 10px;
 }
 
+/* Left Section: Logo & Title */
 .top-bar-section.left {
-  flex-shrink: 0; /* Prevent logo from squishing */
-  min-width: auto;
-  margin-right: 20px;
-}
-
-.top-bar-section.center {
-  flex-grow: 1;
-  justify-content: center;
-  gap: 5px; /* Tighter gap between buttons */
-  overflow: hidden; /* Hide potential overflow */
-}
-
-.top-bar-section.right {
-  flex-shrink: 0;
-  margin-left: 20px;
-  justify-content: flex-end;
+  min-width: 150px;
 }
 
 .app-title {
@@ -51,8 +37,7 @@
 
 .divider {
   color: var(--text-muted);
-  font-size: 1.2rem;
-  margin: 0 5px;
+  margin: 0 8px;
 }
 
 .map-title {
@@ -61,18 +46,29 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px;
+  max-width: 200px;
 }
 
-/* --- Tool Buttons --- */
+/* Center Section: The Tools */
+.top-bar-section.center {
+  display: flex;
+  gap: 8px;
+}
+
+/* Right Section: Utilities */
+.top-bar-section.right {
+  justify-content: flex-end;
+}
+
+/* --- BUTTON STYLES --- */
 .tool-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  padding: 8px 12px; /* Smaller horizontal padding */
+  padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
@@ -86,12 +82,10 @@
   color: var(--text-main);
 }
 
-.tool-btn.active {
-  color: var(--accent-color);
-  background-color: var(--bg-input);
+.tool-btn svg {
+  font-size: 1.1rem;
 }
 
-/* Icon Buttons (Left/Right) */
 .icon-btn {
   background: transparent;
   border: none;
@@ -103,24 +97,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s, background 0.2s;
 }
 
 .icon-btn:hover {
   color: var(--text-main);
   background-color: var(--bg-input);
-}
-
-.ai-btn {
-  color: var(--accent-color);
-  background-color: rgba(0, 122, 255, 0.1);
-}
-
-.notification-btn {
-  padding: 8px;
-  width: auto;
-  min-width: 36px;
-  justify-content: center;
 }
 
 .divider-vertical {
@@ -130,37 +111,68 @@
   margin: 0 5px;
 }
 
-/* --- RESPONSIVE MAGIC --- */
+/* --- AI & Notification Specifics --- */
+.ai-tool { color: var(--accent-color); }
+.ai-tool:hover { background-color: rgba(0, 122, 255, 0.1); }
+.notification-btn { width: 36px; padding: 0; justify-content: center; }
 
-/* On medium screens (Laptops/Tablets), hide the text labels of less critical items */
-@media (max-width: 1200px) {
-  .tool-btn span {
-    display: none; /* Hide text if you use <span>...</span> inside buttons */
-  }
-  /* Since we didn't use spans in the JSX, we hide text by font-size hack or just icon mode */
-  .tool-btn {
-    font-size: 0; /* Hides text */
-    gap: 0;
-    padding: 10px; /* Square-ish button */
-  }
-  .tool-btn svg {
-    font-size: 1.2rem; /* Restore icon size */
-  }
-  .map-title {
-    max-width: 100px; /* Shrink title */
-  }
-}
 
-/* On mobile screens, hide the center section entirely (move to a hamburger menu later if needed) 
-   OR just show critical icons */
-@media (max-width: 600px) {
-  .top-bar-section.center {
-    display: none; 
-  }
-  .map-title {
-    display: none;
-  }
+/* --- 📱 MOBILE TRANSFORMER (Max Width 768px) --- */
+@media (max-width: 768px) {
+  
+  /* 1. Simplify Top Bar */
   .top-bar {
     padding: 0 10px;
+  }
+  .app-title { font-size: 1rem; }
+  .map-title { display: none; } /* Hide map name to save space */
+  .divider { display: none; }
+
+  /* 2. Move CENTER section to BOTTOM BAR */
+  .top-bar-section.center {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 65px; /* Touch friendly height */
+    background-color: var(--bg-panel);
+    border-top: 1px solid var(--border-color);
+    border-bottom: none;
+    padding: 0 5px;
+    justify-content: space-around; /* Even spacing */
+    z-index: 1100; /* Above everything */
+    box-shadow: 0 -2px 15px var(--shadow-color);
+    
+    /* iPhone Safe Area support */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* 3. Transform Buttons into "App Icons" */
+  .tool-btn {
+    flex-direction: column; /* Stack Icon on top of Text */
+    gap: 2px;
+    font-size: 0.7rem; /* Tiny text */
+    padding: 5px;
+    background: transparent !important; /* Remove hover blocks */
+    border: none;
+    color: var(--text-muted);
+    flex-grow: 1;
+    height: 100%;
+    justify-content: center;
+  }
+
+  .tool-btn svg {
+    font-size: 1.4rem; /* Larger icons for touch */
+    margin-bottom: 2px;
+  }
+
+  .tool-btn:active {
+    color: var(--accent-color);
+    transform: scale(0.95);
+  }
+
+  /* 4. Hide Dividers on Mobile */
+  .divider-vertical {
+    display: none;
   }
 }

@@ -3,34 +3,66 @@
   top: 0;
   left: 0;
   width: 280px;
-  height: 100vh;
+  height: 100vh; /* Fallback */
+  height: 100dvh; /* Fix for Mobile Browsers */
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Stack children */
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 200; /* Higher than map */
+  z-index: 1200; /* Above almost everything */
   box-shadow: 4px 0 15px var(--shadow-color);
+  padding-top: 60px; /* Space for TopBar */
 }
 
 .sidebar.open {
   transform: translateX(0);
 }
 
-/* MOBILE OVERRIDE */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 85%; /* Leave a little gap so user sees map behind */
-    max-width: 350px;
-  }
+.sidebar-header {
+  flex-shrink: 0; /* Don't shrink */
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-panel);
 }
 
-/* ... (Rest of your existing Sidebar styles for headers/lists remain the same) ... */
-.sidebar-header { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;}
 .sidebar-header h3 { margin: 0; color: var(--text-main); }
 .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
-.maps-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
-.map-item { padding: 12px; margin-bottom: 8px; background-color: var(--bg-panel); border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); color: var(--text-main); }
+
+/* --- SCROLLABLE AREA --- */
+.maps-list {
+  flex-grow: 1; /* Take up all remaining space */
+  overflow-y: auto; /* Scroll ONLY this part */
+  padding: 10px;
+  -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+}
+
+.map-item {
+  padding: 12px; margin-bottom: 8px; background-color: var(--bg-panel);
+  border-radius: 8px; cursor: pointer; display: flex;
+  justify-content: space-between; align-items: center;
+  border: 1px solid var(--border-color); color: var(--text-main);
+}
 .map-item.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
-.sidebar-footer { padding: 15px; border-top: 1px solid var(--border-color); background-color: var(--bg-input); }
+
+/* --- STICKY FOOTER (Create Map) --- */
+.sidebar-footer {
+  flex-shrink: 0; /* Don't shrink */
+  padding: 15px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-panel);
+  /* Handle iPhone Safe Area (Home Bar) */
+  padding-bottom: max(15px, env(safe-area-inset-bottom)); 
+}
+
+/* --- MOBILE OVERRIDE --- */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 85%; /* Easier to see map behind */
+    max-width: 320px;
+  }
+}
