@@ -69,7 +69,7 @@ export default function Dashboard({ onOpenMap, onOpenTimetable, onOpenGoals }) {
   return (
     <div className="dashboard-container">
       <header className="dash-header">
-        <h1>👋 Welcome Back, Mr. Redddy</h1>
+        <h1>👋 Welcome Back, Mr. Reddy</h1>
         <p className="dash-quote">"{quote.text}" — {quote.author}</p>
         
         <div className="streak-badge">
