@@ -2,10 +2,10 @@ import { useCallback } from 'react';
 
 export default function ContextMenu({
   id,
-  type,
+  type, // 'node' or 'edge'
   top,
   left,
-  onAction,
+  onAction, // This is our callback function
 }) {
   const handleAction = useCallback(
     (action, payload) => {
@@ -18,26 +18,43 @@ export default function ContextMenu({
     <div
       style={{ top, left }}
       className="context-menu"
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()} // Prevent default browser menu
     >
+      {/* Show different items based on what we clicked */}
       {type === 'node' && (
         <>
+          {/* --- ACTIONS --- */}
           <button onClick={() => handleAction('generateRoadmap')}>
             🤖 Generate Roadmap
           </button>
           
-          {/* --- NEW BUTTON --- */}
-          <button onClick={() => handleAction('addToTimetable')}>
-            📅 Add to Today
-          </button>
-          {/* ------------------ */}
+          <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
 
+          <button onClick={() => handleAction('addToTimetable')}>
+            📅 Add Single to Today
+          </button>
+          
+          <button onClick={() => handleAction('planRoadmap')}>
+             🗓️ Plan Roadmap (1 Day/Node)
+          </button>
+          
+          <button onClick={() => handleAction('addToGoals')}>
+             🎯 Set as Goal
+          </button>
+
+          <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
+
+          <button onClick={() => handleAction('editDetails')}>
+            📝 Edit Notes & Links
+          </button>
           <button onClick={() => handleAction('selectGroup')}>
             🔗 Select Entire Group
           </button>
           
-          <p>Node Color</p>
-          {/* ... (colors remain the same) ... */}
+          <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
+          
+          {/* --- COLORS --- */}
+          <p style={{paddingLeft: 10, fontSize: '0.75rem', color: '#888'}}>COLOR</p>
           <button onClick={() => handleAction('setNodeColor', { background: '#66bb6a', text: '#fff' })}>Green (Start)</button>
           <button onClick={() => handleAction('setNodeColor', { background: '#ef5350', text: '#fff' })}>Red (End)</button>
           <button onClick={() => handleAction('setNodeColor', { background: '#ffee58', text: '#222' })}>Yellow (Important)</button>

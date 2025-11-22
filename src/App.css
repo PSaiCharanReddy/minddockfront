@@ -1,15 +1,47 @@
+/* --- THEME VARIABLES --- */
+:root {
+  /* DARK MODE (Default) */
+  --bg-app: #1a1a1a;
+  --bg-sidebar: #1e1e1e;
+  --bg-panel: #2a2a2a;
+  --bg-input: #333;
+  --border-color: #444;
+  --text-main: #f0f0f0;
+  --text-muted: #aaa;
+  --accent-color: #007aff;
+  --accent-hover: #0056b3;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --node-bg: #2a2a2a;
+  --node-border: #555;
+}
+
+/* LIGHT MODE OVERRIDES */
+body.light-mode {
+  --bg-app: #f4f4f9;
+  --bg-sidebar: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-input: #f0f0f0;
+  --border-color: #ddd;
+  --text-main: #1a1a1a;
+  --text-muted: #666;
+  --accent-color: #007aff;
+  --accent-hover: #0056b3;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --node-bg: #ffffff;
+  --node-border: #ccc;
+}
+
 /* --- Global Styles --- */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
-  background-color: #1a1a1a;
-  color: #f0f0f0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
   margin: 0;
   padding: 0;
   overflow: hidden;
+  transition: background-color 0.3s, color 0.3s;
 }
 
-/* This is the main container for the whole app */
 .app-container {
   display: flex;
   width: 100vw;
@@ -17,59 +49,56 @@ body {
   transition: margin-right 0.3s ease-in-out;
 }
 
-/* This is the wrapper for the map itself */
 .react-flow-wrapper {
-  flex-grow: 1; /* Takes up all available space */
+  flex-grow: 1;
   height: 100%;
   position: relative;
   transition: width 0.3s ease-in-out;
 }
 
-/* --- Top-Left UI --- */
-.add-node-btn {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 10;
-  background-color: #007aff;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+/* --- React Flow Canvas --- */
+.react-flow__background {
+  background-color: var(--bg-app) !important;
 }
-.add-node-btn:hover {
-  background-color: #0056b3;
+.react-flow__controls {
+  background-color: var(--bg-panel) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+.react-flow__controls button {
+  background-color: var(--bg-panel) !important;
+  color: var(--text-main) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+.react-flow__controls button:hover {
+  background-color: var(--bg-input) !important;
 }
 
-/* --- Top-Right UI (NEW) --- */
+/* --- Top-Right UI --- */
 .top-right-ui {
   position: absolute;
   top: 20px;
   right: 20px;
   z-index: 10;
   display: flex;
-  gap: 15px;
+  gap: 10px;
   align-items: center;
 }
 
 .save-indicator {
-  /* No longer needs position: absolute */
-  background-color: #2a2a2a;
+  background-color: var(--bg-panel);
   padding: 8px 16px;
   border-radius: 8px;
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 0.9rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  border: 1px solid var(--border-color);
 }
 
 .chat-toggle-btn {
-  background-color: #2a2a2a;
-  color: #f0f0f0;
-  border: 1px solid #444;
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   width: 40px;
   height: 40px;
@@ -78,54 +107,50 @@ body {
   align-items: center;
   font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px var(--shadow-color);
   transition: all 0.2s ease;
 }
 .chat-toggle-btn:hover {
-  border-color: #007aff;
-  color: #007aff;
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
-/* --- React Flow Base Styles --- */
-.react-flow__background {
-  background-color: #1a1a1a !important;
+/* --- Add Node Button --- */
+.add-node-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--shadow-color);
 }
-/* We move the controls to stay with the map */
-.react-flow__controls {
-  transition: transform 0.3s ease-in-out;
-}
-
-/* --- THE "PUSH" LOGIC --- */
-/* When chat is open, resize the map wrapper */
-.app-container.chat-open .react-flow-wrapper {
-  width: calc(100% - 370px); /* 370px is our sidebar width */
-}
-/* Move the React Flow controls left */
-.app-container.chat-open .react-flow__controls {
-  transform: translateX(-370px);
-}
-/* Move the top-right UI left */
-.app-container.chat-open .top-right-ui {
-  transform: translateX(-370px);
+.add-node-btn:hover {
+  background-color: var(--accent-hover);
 }
 
-
-/* --- Custom Node (Unchanged) --- */
+/* --- Custom Node --- */
 .custom-node {
-  background-color: #2a2a2a;
-  color: #f0f0f0;
-  border: 1px solid #555;
+  background-color: var(--node-bg);
+  color: var(--text-main);
+  border: 1px solid var(--node-border);
   border-radius: 8px;
   padding: 10px 15px;
   min-width: 180px;
   font-size: 16px;
   transition: background-color 0.2s, border 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
   position: relative;
 }
 .react-flow__node-mindNode.selected .custom-node {
-  border: 1px solid #007aff;
-  box-shadow: 0 0 10px 1px #007aff;
+  border: 1px solid var(--accent-color);
+  box-shadow: 0 0 10px 1px var(--accent-color);
 }
 .node-header {
   display: flex;
@@ -134,21 +159,13 @@ body {
   gap: 10px;
   margin-bottom: 5px;
 }
-.node-content {
-  flex-grow: 1;
-  cursor: grab;
-}
-.node-label {
-  padding: 5px 0;
-  font-weight: bold;
-}
+.node-label { padding: 5px 0; font-weight: bold; }
 .node-input {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: inherit;
   font-size: 16px;
   font-weight: bold;
   width: 100%;
-  color: #f0f0f0;
+  color: var(--text-main);
   background-color: transparent;
   border: none;
   outline: none;
@@ -157,133 +174,140 @@ body {
   box-sizing: border-box;
 }
 
-/* --- Summary Controls (Unchanged) --- */
+/* --- Summary & Controls --- */
 .summary-controls {
-  position: absolute;
-  z-index: 10;
-  bottom: -14px;
-  right: -14px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  position: absolute; z-index: 10; bottom: -14px; right: -14px; display: flex; align-items: center; gap: 5px;
 }
-.summary-toggle-btn,
-.add-summary-btn {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  color: #888;
-  font-size: 24px;
-  font-weight: 300;
-  line-height: 1;
-  padding: 0;
-  margin: 0;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-  transition: color 0.2s;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.summary-toggle-btn, .add-summary-btn {
+  background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s; display: flex; justify-content: center; align-items: center;
 }
-.add-summary-btn {
-  font-size: 32px;
-}
-.summary-toggle-btn:hover,
-.add-summary-btn:hover {
-  color: #fff;
-}
-.spinner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  color: #888;
-  font-size: 24px;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+.add-summary-btn { font-size: 32px; }
+.summary-toggle-btn:hover, .add-summary-btn:hover { color: var(--accent-color); }
+.spinner { color: var(--text-muted); animation: spin 1s linear infinite; font-size: 24px; display: flex; }
 
-/* --- Summary Section (Unchanged) --- */
 .node-summary-container {
-  background-color: #2a2a2a;
-  border: 1px solid #444;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 10px;
   margin-top: 8px;
   width: 100%;
   box-sizing: border-box;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  color: #ccc;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  color: var(--text-muted);
 }
-.node-summary {
-  margin: 0;
-  font-size: 0.9em;
-  color: #ccc;
-  cursor: text;
-  white-space: pre-wrap;
-}
+.node-summary { margin: 0; font-size: 0.9em; cursor: text; white-space: pre-wrap; }
 .summary-textarea {
-  width: 100%;
-  min-height: 60px;
-  padding: 5px;
-  font-size: 0.9em;
-  background-color: #333;
-  border: 1px solid #007aff;
-  color: #f0f0f0;
-  border-radius: 4px;
-  box-sizing: border-box;
-  resize: vertical;
+  width: 100%; min-height: 60px; padding: 5px; font-size: 0.9em;
+  background-color: var(--bg-input); border: 1px solid var(--accent-color);
+  color: var(--text-main); border-radius: 4px; resize: vertical;
 }
 
-/* --- Context Menu (Unchanged) --- */
+/* --- SIDEBARS (Maps, Goals, Timetable) --- */
+.sidebar, .goals-sidebar, .timetable-sidebar {
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+  color: var(--text-main);
+  box-shadow: 4px 0 15px var(--shadow-color);
+}
+
+.sidebar-header, .goals-header, .timetable-header {
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+}
+.sidebar-header h3, .goals-header h3, .timetable-header h3 { color: var(--text-main); }
+.close-btn { color: var(--text-muted); }
+.close-btn:hover { color: var(--text-main); }
+
+.sidebar-footer, .create-goal-form {
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
+}
+
+/* List Items */
+.map-item, .goal-card, .task-item {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.map-item:hover, .task-item:hover { background-color: var(--bg-input); }
+.map-item.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
+
+/* Inputs in Sidebars */
+.create-map-form input, .create-goal-form input {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.create-map-btn {
+  background-color: var(--bg-input);
+  color: var(--text-main);
+}
+.create-map-btn:hover { background-color: var(--border-color); }
+
+/* --- CHAT WINDOW --- */
+.chat-window {
+  background-color: var(--bg-sidebar);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -10px 0 20px var(--shadow-color);
+}
+.chat-header {
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+}
+.chat-input-area {
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
+}
+.chat-input-area input {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.chat-message.ai { background-color: var(--bg-input); color: var(--text-main); }
+.chat-message.user { background-color: var(--accent-color); color: white; }
+
+/* --- Context Menu (FIXED) --- */
 .context-menu {
   position: absolute;
-  background-color: #333;
-  border: 1px solid #555;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--accent-color); /* High visibility border */
   border-radius: 8px;
   padding: 10px;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 999999; /* Force on top */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 180px;
+  pointer-events: auto;
 }
-.context-menu p {
+.context-menu p { 
   margin: 0;
   font-size: 0.8rem;
-  color: #aaa;
+  color: var(--text-muted);
   font-weight: bold;
   padding-bottom: 5px;
-  border-bottom: 1px solid #555;
+  border-bottom: 1px solid var(--border-color);
 }
 .context-menu button {
-  background: #444;
-  color: #f0f0f0;
+  background: var(--bg-input);
+  color: var(--text-main);
   border: none;
-  padding: 8px 12px;
+  padding: 10px;
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
+  font-size: 14px;
+  transition: background 0.2s;
 }
-.context-menu button:hover {
-  background-color: #007aff;
+.context-menu button:hover { background-color: var(--accent-color); color: white; }
+
+/* --- Loading --- */
+.loading-screen {
+  display: flex; justify-content: center; align-items: center; height: 100vh;
+  font-size: 1.5rem; font-weight: 600; color: var(--text-main);
 }
 
-/* --- Loading (Unchanged) --- */
-.loading-screen {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

@@ -1,0 +1,42 @@
+.timetable-full-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(0,0,0,0.8); z-index: 2000;
+  display: flex; justify-content: center; align-items: center;
+  backdrop-filter: blur(5px);
+}
+.timetable-full-container {
+  width: 90%; height: 90%; background-color: var(--bg-app);
+  border-radius: 16px; display: flex; flex-direction: column;
+  overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border: 1px solid var(--border-color);
+}
+.timetable-toolbar {
+  padding: 20px; background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.mode-switch { display: flex; gap: 10px; background-color: var(--bg-input); padding: 5px; border-radius: 8px; }
+.mode-switch button {
+  background: transparent; border: none; color: var(--text-muted);
+  padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+}
+.mode-switch button.active { background-color: var(--accent-color); color: white; }
+.close-full-btn { background: transparent; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; }
+.timetable-content { flex-grow: 1; overflow: hidden; position: relative; }
+.simple-list { padding: 20px; overflow-y: auto; height: 100%; }
+.simple-task-row {
+  background-color: var(--bg-panel); padding: 15px; margin-bottom: 10px;
+  border-radius: 8px; display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color);
+}
+.visual-schedule-wrapper { width: 100%; height: 100%; }
+.schedule-node {
+  display: flex; background-color: var(--bg-panel); border: 1px solid var(--accent-color);
+  border-radius: 8px; overflow: hidden; width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.schedule-time {
+  background-color: var(--accent-color); color: white; padding: 15px;
+  display: flex; align-items: center; font-weight: bold; font-size: 1.1rem;
+}
+.schedule-content { padding: 15px; flex-grow: 1; }
+.schedule-content strong { display: block; font-size: 1.1rem; margin-bottom: 5px; }
+.schedule-content p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }

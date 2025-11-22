@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { AiOutlineCheck, AiOutlineDelete, AiOutlineCalendar } from 'react-icons/ai';
+import { AiOutlineCheck, AiOutlineDelete, AiOutlineFullscreen } from 'react-icons/ai';
 import apiClient from '../api';
 import './Timetable.css';
 
-export default function Timetable({ isOpen, toggleTimetable, refreshTrigger }) {
+export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onOpenFull }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch tasks whenever the sidebar opens or a new task is added
   useEffect(() => {
     if (isOpen) fetchTasks();
   }, [isOpen, refreshTrigger]);
@@ -16,8 +15,6 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger }) {
     setLoading(true);
     try {
       const response = await apiClient.get('/tasks/');
-      // Filter for tasks that are NOT completed (or show all)
-      // For now, let's show everything sorted by status
       const sortedTasks = response.data.sort((a, b) => 
         (a.is_completed === b.is_completed) ? 0 : a.is_completed ? 1 : -1
       );
@@ -31,15 +28,12 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger }) {
 
   const toggleTask = async (task) => {
     try {
-      // Optimistic update (update UI immediately)
       const newStatus = !task.is_completed;
       setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: newStatus } : t));
-      
-      // Send to backend
       await apiClient.put(`/tasks/${task.id}/status?completed=${newStatus}`);
     } catch (error) {
       console.error("Error updating task", error);
-      fetchTasks(); // Revert on error
+      fetchTasks();
     }
   };
 
@@ -57,7 +51,14 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger }) {
     <div className={`timetable-sidebar ${isOpen ? 'open' : ''}`}>
       <div className="timetable-header">
         <h3>📅 Daily Plan</h3>
-        <button onClick={toggleTimetable} className="close-btn">×</button>
+        <div className="header-actions">
+          <button onClick={onOpenFull} className="icon-btn" title="Open Full View">
+            <AiOutlineFullscreen />
+          </button>
+          
+          {/* This button triggers the close function */}
+          <button onClick={toggleTimetable} className="close-btn">×</button>
+        </div>
       </div>
 
       <div className="task-list">
