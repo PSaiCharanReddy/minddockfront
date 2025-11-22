@@ -3,16 +3,16 @@ import { AiOutlineClose, AiOutlineSend } from 'react-icons/ai';
 import apiClient from '../api';
 import './AIChat.css';
 
-// We now get 'isOpen' and 'toggleChat' from the parent (App.jsx)
-function AIChat({ nodes, edges, onAiGeneratedMap, isOpen, toggleChat }) {
+// We accept 'tasks', 'goals', and 'notes' as props so the AI can see them
+function AIChat({ nodes, edges, tasks, goals, notes, onAiGeneratedMap, isOpen, toggleChat }) {
   const [messages, setMessages] = useState([
     { from: 'ai', text: 'Hello! How can I help you organize your mind?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const chatBodyRef = useRef(null); // To auto-scroll
+  const chatBodyRef = useRef(null); 
 
-  // Auto-scroll to bottom when new messages appear
+  // Auto-scroll to bottom
   useEffect(() => {
     if (chatBodyRef.current) {
       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
@@ -34,18 +34,26 @@ function AIChat({ nodes, edges, onAiGeneratedMap, isOpen, toggleChat }) {
       text: msg.text
     }));
     
+    // Clean circular references from nodes before sending
     const cleanNodes = nodes.map(({ selected, dragging, ...node }) => node);
 
     try {
+      // --- THIS IS THE CRITICAL PART ---
+      // We send ALL data (Nodes, Edges, Tasks, Goals, Notes) to the AI
       const response = await apiClient.post('/ai/chat', {
         messages: apiMessages,
         nodes: cleanNodes,
-        edges: edges
+        edges: edges,
+        tasks: tasks || [], 
+        goals: goals || [],
+        notes: notes || []
       });
+      // --------------------------------
 
       const aiReply = { from: 'ai', text: response.data.reply };
       setMessages([...newMessages, aiReply]);
 
+      // If AI generated a new map, render it
       if (response.data.newMapData && response.data.newMapData.nodes && response.data.newMapData.nodes.length > 0) {
         onAiGeneratedMap(response.data.newMapData);
       }
@@ -66,13 +74,10 @@ function AIChat({ nodes, edges, onAiGeneratedMap, isOpen, toggleChat }) {
     }
   };
 
-  // The main div is now the chat window itself
-  // The 'open' class is controlled by the 'isOpen' prop
   return (
     <div className={`chat-window ${isOpen ? 'open' : ''}`}>
       <div className="chat-header">
         <h3>MindDock AI</h3>
-        {/* The close button now calls the function from App.jsx */}
         <button onClick={toggleChat} className="chat-close-btn">
           <AiOutlineClose />
         </button>
@@ -97,7 +102,7 @@ function AIChat({ nodes, edges, onAiGeneratedMap, isOpen, toggleChat }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask me anything..."
+          placeholder="Ask about your tasks, goals, or maps..."
           disabled={isLoading}
         />
         <button onClick={handleSend} className="chat-send-btn" disabled={isLoading}>

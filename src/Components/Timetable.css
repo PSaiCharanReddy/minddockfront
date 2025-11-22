@@ -149,3 +149,43 @@
   color: var(--text-muted);
   margin-top: 50px;
 }
+/* --- New Input Area --- */
+.timetable-input-area {
+  padding: 10px 15px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+}
+
+.timetable-input-area input {
+  flex-grow: 1;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--text-main);
+  outline: none;
+}
+
+.timetable-input-area input:focus {
+  border-color: var(--accent-color);
+}
+
+.timetable-input-area button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.timetable-input-area button:disabled {
+  background-color: var(--border-color);
+  cursor: default;
+}

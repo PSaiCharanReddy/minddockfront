@@ -17,7 +17,8 @@ import {
 } from '@xyflow/react';
 
 import { toPng } from 'html-to-image';
-import { AiOutlineLoading, AiOutlineDownload, AiOutlineCalendar, AiOutlineTrophy, AiOutlineHome } from 'react-icons/ai';
+import confetti from 'canvas-confetti'; 
+import { AiOutlineLoading, AiOutlineDownload, AiOutlineCalendar, AiOutlineTrophy, AiOutlineHome, AiOutlineBook, AiOutlineSearch } from 'react-icons/ai'; 
 import { BsChatDots } from 'react-icons/bs';
 
 import '@xyflow/react/dist/style.css';
@@ -33,7 +34,10 @@ import TimetableFull from './Components/TimetableFull';
 import Goals from './Components/Goals';
 import NodeDetails from './Components/NodeDetails';
 import Dashboard from './Components/Dashboard';
+import Journal from './Components/Journal';
+import CommandPalette from './Components/CommandPalette';
 import { useUndoRedo } from './hooks/useUndoRedo';
+import { useNotifications } from './hooks/useNotifications';
 
 let nodeId = 1000;
 
@@ -57,6 +61,7 @@ function MindNode(props) {
 }
 
 function App() {
+  // --- STATE ---
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [maps, setMaps] = useState([]);
@@ -66,6 +71,7 @@ function App() {
   // --- Data State ---
   const [tasks, setTasks] = useState([]);
   const [goals, setGoals] = useState([]);
+  const [notes, setNotes] = useState([]);
 
   // --- UI State ---
   const [contextMenu, setContextMenu] = useState(null);
@@ -78,6 +84,8 @@ function App() {
   const [isTimetableOpen, setIsTimetableOpen] = useState(false);
   const [isTimetableFullOpen, setIsTimetableFullOpen] = useState(false);
   const [isGoalsOpen, setIsGoalsOpen] = useState(false);
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
   
   const [theme, setTheme] = useState(localStorage.getItem('minddock-theme') || 'dark');
@@ -90,17 +98,24 @@ function App() {
   const rfInstance = useReactFlow();
   const { takeSnapshot, undo, redo } = useUndoRedo();
 
+  // --- NOTIFICATIONS ---
+  useNotifications(tasks);
+
   // --- INITIAL FETCH ---
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
       try {
-        const mapRes = await apiClient.get('/map/');
+        const [mapRes, taskRes, goalRes, noteRes] = await Promise.all([
+          apiClient.get('/map/'),
+          apiClient.get('/tasks/'),
+          apiClient.get('/goals/'),
+          apiClient.get('/notes/')
+        ]);
         setMaps(mapRes.data);
-        const taskRes = await apiClient.get('/tasks/');
         setTasks(taskRes.data);
-        const goalRes = await apiClient.get('/goals/');
         setGoals(goalRes.data);
+        setNotes(noteRes.data);
       } catch (error) {
         console.error("Init failed:", error);
       } finally {
@@ -110,6 +125,10 @@ function App() {
     init();
   }, []);
 
+  const triggerConfetti = () => {
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+  };
+
   // --- THEME ---
   useEffect(() => {
     if (theme === 'light') { document.body.classList.add('light-mode'); } 
@@ -117,6 +136,20 @@ function App() {
     localStorage.setItem('minddock-theme', theme);
   }, [theme]);
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+
+  // --- NAVIGATION HANDLER (Fix for ReferenceError) ---
+  const handleNavigate = (item) => {
+    if (item.type === 'node') {
+      rfInstance.fitView({ nodes: [{ id: item.id }], duration: 800, padding: 2 });
+      setNodes(nds => nds.map(n => ({...n, selected: n.id === item.id})));
+    } else if (item.type === 'task') {
+      setIsTimetableOpen(true);
+    } else if (item.type === 'goal') {
+      setIsGoalsOpen(true);
+    } else if (item.type === 'note') {
+      setIsJournalOpen(true);
+    }
+  };
 
   // --- DETAILS SAVE ---
   const saveNodeDetails = (id, details) => {
@@ -140,9 +173,8 @@ function App() {
     } catch (error) { console.error(error); alert("Failed to add task."); }
   };
 
-  // --- PLAN ROADMAP LOGIC (NEW) ---
+  // --- PLAN ROADMAP LOGIC ---
   const planRoadmapSchedule = async (startNodeId) => {
-    // 1. Find connected nodes (BFS) - same as before
     const connectedNodes = [];
     const queue = [startNodeId];
     const visited = new Set();
@@ -163,18 +195,13 @@ function App() {
 
     try {
       setIsLoading(true);
-      
-      // 2. Call the AI Scheduler Endpoint
       const response = await apiClient.post('/ai/schedule', { nodes: connectedNodes });
       const aiTasks = response.data.tasks;
-
-      // 3. Create tasks based on AI suggestions
       const today = new Date();
       
       for (const task of aiTasks) {
         const taskDate = new Date(today);
         taskDate.setDate(today.getDate() + task.days_from_now);
-        // Set a default start time (e.g., 9:00 AM)
         taskDate.setHours(9, 0, 0, 0);
 
         await apiClient.post('/tasks/', {
@@ -184,7 +211,6 @@ function App() {
         });
       }
       
-      // Refresh tasks and open full timetable
       const res = await apiClient.get('/tasks/');
       setTasks(res.data);
       setIsTimetableFullOpen(true);
@@ -196,6 +222,7 @@ function App() {
       setIsLoading(false);
     }
   };
+
   const addToGoals = async (node) => {
     if (!node || !node.data.label) return;
     try {
@@ -222,22 +249,19 @@ function App() {
   const handlePaste = useCallback(() => { if (!clipboard || !clipboard.nodes.length) return; takeSnapshot(nodes, edges); const { x, y, zoom } = rfInstance.getViewport(); const centerX = -x / zoom + (window.innerWidth / 2) / zoom; const centerY = -y / zoom + (window.innerHeight / 2) / zoom; const copiedBounds = getNodesBounds(clipboard.nodes); const offsetX = centerX - (copiedBounds.x + copiedBounds.width / 2); const offsetY = centerY - (copiedBounds.y + copiedBounds.height / 2); const idMap = new Map(); const newNodes = []; const newEdges = []; clipboard.nodes.forEach((node) => { const newId = `${nodeId++}`; idMap.set(node.id, newId); newNodes.push({ ...node, id: newId, selected: true, position: { x: node.position.x + offsetX, y: node.position.y + offsetY }, data: { ...node.data } }); }); clipboard.edges.forEach((edge) => { const newSource = idMap.get(edge.source); const newTarget = idMap.get(edge.target); if (newSource && newTarget) { newEdges.push({ ...edge, id: `e-${newSource}-${newTarget}-${Date.now()}`, source: newSource, target: newTarget, selected: true }); } }); setNodes([...nodes.map(n => ({ ...n, selected: false })), ...newNodes]); setEdges([...edges.map(e => ({ ...e, selected: false })), ...newEdges]); }, [clipboard, nodes, edges, rfInstance, takeSnapshot]);
 
   // --- SHORTCUTS ---
-  useEffect(() => { const handleKeyDown = (e) => { if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return; const isCtrl = e.metaKey || e.ctrlKey; if (isCtrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(nodes, edges, setNodes, setEdges); } if ((isCtrl && e.key === 'y') || (isCtrl && e.shiftKey && e.key === 'z')) { e.preventDefault(); redo(nodes, edges, setNodes, setEdges); } if (isCtrl && e.key === 'c') { e.preventDefault(); handleCopy(); } if (isCtrl && e.key === 'v') { e.preventDefault(); handlePaste(); } }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [nodes, edges, undo, redo, handleCopy, handlePaste]);
+  useEffect(() => { const handleKeyDown = (e) => { 
+    if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return; 
+    const isCtrl = e.metaKey || e.ctrlKey; 
+    if (isCtrl && e.key === 'k') { e.preventDefault(); setIsPaletteOpen(prev => !prev); return; } 
+    if (isCtrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(nodes, edges, setNodes, setEdges); } 
+    if ((isCtrl && e.key === 'y') || (isCtrl && e.shiftKey && e.key === 'z')) { e.preventDefault(); redo(nodes, edges, setNodes, setEdges); } 
+    if (isCtrl && e.key === 'c') { e.preventDefault(); handleCopy(); } 
+    if (isCtrl && e.key === 'v') { e.preventDefault(); handlePaste(); } 
+  }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [nodes, edges, undo, redo, handleCopy, handlePaste]);
 
   // --- LOAD / SAVE ---
   useEffect(() => {
-    const fetchMaps = async () => {
-      try {
-        setIsLoading(true);
-        const response = await apiClient.get('/map/');
-        setMaps(response.data);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Failed to fetch maps:", error);
-        setIsLoading(false);
-      }
-    };
-    fetchMaps();
+    // Maps are loaded in initial fetch
   }, []);
 
   const loadMap = async (id) => { 
@@ -346,10 +370,9 @@ function App() {
 
   const handleMenuAction = useCallback((action, payload) => {
     if (['setNodeColor', 'setEdgeStyle'].includes(action)) takeSnapshot(nodes, edges);
-    
     if (action === 'editDetails') { setSelectedNodeForDetails(contextMenu.node); }
     else if (action === 'addToTimetable') addToTimetable(contextMenu.node);
-    else if (action === 'planRoadmap') planRoadmapSchedule(contextMenu.id); // <-- NEW LOGIC
+    else if (action === 'planRoadmap') planRoadmapSchedule(contextMenu.id);
     else if (action === 'addToGoals') addToGoals(contextMenu.node);
     else if (action === 'generateRoadmap') generateRoadmap(contextMenu.node);
     else if (action === 'selectGroup') selectConnectedGroup(contextMenu.id);
@@ -374,6 +397,13 @@ function App() {
               <AiOutlineHome />
             </button>
           )}
+          <button onClick={() => setIsJournalOpen(!isJournalOpen)} className="chat-toggle-btn" title="Journal" style={{fontSize:'1.2rem'}}>
+            <AiOutlineBook />
+          </button>
+          
+          <button onClick={() => setIsPaletteOpen(true)} className="chat-toggle-btn" title="Search (Ctrl+K)" style={{fontSize:'1.2rem'}}>
+            <AiOutlineSearch />
+          </button>
 
           <button onClick={toggleTheme} className="chat-toggle-btn" title="Toggle Theme" style={{fontSize:'1.2rem'}}>{theme === 'dark' ? '☀️' : '🌙'}</button>
           <button onClick={() => setIsGoalsOpen(!isGoalsOpen)} className="chat-toggle-btn" title="Goals Tracker" style={{fontSize:'1.2rem'}}>🏆</button>
@@ -423,19 +453,28 @@ function App() {
         edges={edges} 
         tasks={tasks} 
         goals={goals}
+        notes={notes}
         selectedNodes={nodes.filter(n => n.selected)} 
         onAiGeneratedMap={onAiGeneratedMap} 
         isOpen={isChatOpen} 
         toggleChat={() => setIsChatOpen(!isChatOpen)} 
       />
       
-      <Timetable isOpen={isTimetableOpen} toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)} refreshTrigger={taskRefreshTrigger} onOpenFull={() => { setIsTimetableOpen(false); setIsTimetableFullOpen(true); }} />
+      <Timetable 
+        isOpen={isTimetableOpen} 
+        toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)} 
+        refreshTrigger={taskRefreshTrigger}
+        onOpenFull={() => { setIsTimetableOpen(false); setIsTimetableFullOpen(true); }}
+        onConfetti={triggerConfetti}
+      />
       
       {isTimetableFullOpen && <TimetableFull isOpen={isTimetableFullOpen} onClose={() => setIsTimetableFullOpen(false)} />}
       
       <Goals isOpen={isGoalsOpen} toggleGoals={() => setIsGoalsOpen(!isGoalsOpen)} />
       
       <NodeDetails node={selectedNodeForDetails} isOpen={!!selectedNodeForDetails} onClose={() => setSelectedNodeForDetails(null)} onSave={saveNodeDetails} />
+      <Journal isOpen={isJournalOpen} toggleJournal={() => setIsJournalOpen(!isJournalOpen)} />
+      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} nodes={nodes} tasks={tasks} goals={goals} notes={notes} onNavigate={handleNavigate} />
     </div>
   );
 }

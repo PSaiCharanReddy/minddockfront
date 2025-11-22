@@ -1,0 +1,100 @@
+.focus-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(10, 10, 10, 0.95); /* Very dark overlay */
+  z-index: 3000; /* Topmost layer */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.focus-container {
+  text-align: center;
+  color: white;
+  max-width: 500px;
+  width: 90%;
+}
+
+.focus-badge {
+  background-color: #007aff;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.focus-close {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 32px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.focus-close:hover { color: white; }
+
+.focus-content h2 {
+  font-size: 2.5rem;
+  margin: 30px 0 10px;
+}
+
+.focus-desc {
+  color: #aaa;
+  font-size: 1.1rem;
+  margin-bottom: 40px;
+}
+
+.timer-display {
+  font-size: 6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #007aff;
+  margin-bottom: 40px;
+  text-shadow: 0 0 30px rgba(0, 122, 255, 0.3);
+}
+
+.focus-controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.toggle-btn, .complete-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s;
+}
+
+.toggle-btn {
+  background-color: #333;
+  color: white;
+}
+
+.complete-btn {
+  background-color: #007aff;
+  color: white;
+}
+
+.toggle-btn:hover, .complete-btn:hover {
+  transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

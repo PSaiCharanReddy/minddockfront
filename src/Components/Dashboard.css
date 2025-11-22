@@ -3,7 +3,7 @@
   height: 100%;
   background-color: var(--bg-app);
   color: var(--text-main);
-  padding: 40px;
+  padding: 30px;
   box-sizing: border-box;
   overflow-y: auto;
   display: flex;
@@ -13,12 +13,15 @@
 
 .dash-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .dash-header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 10px;
+  font-size: 2.2rem;
+  margin-bottom: 5px;
   background: linear-gradient(90deg, #007aff, #00c6ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -27,15 +30,32 @@
 .dash-quote {
   font-style: italic;
   color: var(--text-muted);
-  font-size: 1.1rem;
+  font-size: 1rem;
+  margin-bottom: 15px;
 }
 
+.streak-badge {
+  background: rgba(255, 165, 0, 0.15);
+  border: 1px solid orange;
+  padding: 5px 15px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: orange;
+  font-size: 0.9rem;
+}
+
+.fire-icon { font-size: 1.2rem; }
+
+/* GRID LAYOUT */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 20px;
   width: 100%;
-  max-width: 1000px;
+  max-width: 1100px;
+  padding-bottom: 40px;
 }
 
 .dash-card {
@@ -46,6 +66,20 @@
   box-shadow: 0 4px 12px var(--shadow-color);
   display: flex;
   flex-direction: column;
+}
+
+/* CHART CARDS */
+.chart-card {
+  min-height: 250px;
+}
+
+.chart-container {
+  flex-grow: 1;
+  height: 200px; /* Fixed height for charts */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .card-header {
@@ -63,6 +97,7 @@
   align-items: center;
   gap: 8px;
   font-size: 1.1rem;
+  color: var(--text-main);
 }
 
 .card-header button {
@@ -78,17 +113,18 @@
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* Task Items */
+/* Tasks */
 .dash-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px;
+  padding: 10px;
   background-color: var(--bg-input);
   border-radius: 6px;
+  font-size: 0.95rem;
 }
 .checkbox-circle {
   width: 16px; height: 16px;
@@ -96,7 +132,7 @@
   border-radius: 50%;
 }
 
-/* Goal Items */
+/* Goal Items (Old list style, mostly replaced by chart now) */
 .dash-goal-item {
   display: flex;
   flex-direction: column;
@@ -118,7 +154,7 @@
   background-color: var(--accent-color);
 }
 
-/* Map Tiles */
+/* Maps */
 .maps-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -148,6 +184,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
+  color: var(--text-main);
 }
 .arrow-icon { color: var(--text-muted); }
-.empty-text { color: var(--text-muted); font-style: italic; text-align: center; }
+.empty-text { color: var(--text-muted); font-style: italic; text-align: center; margin-top: 20px; }

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import '../App.css'; // Ensure styles are loaded
 
 export default function ContextMenu({
   id,
@@ -28,7 +29,7 @@ export default function ContextMenu({
             🤖 Generate Roadmap
           </button>
           
-          <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
+          <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }}></div>
 
           <button onClick={() => handleAction('addToTimetable')}>
             📅 Add Single to Today
@@ -42,7 +43,7 @@ export default function ContextMenu({
              🎯 Set as Goal
           </button>
 
-          <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
+          <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }}></div>
 
           <button onClick={() => handleAction('editDetails')}>
             📝 Edit Notes & Links
@@ -51,10 +52,10 @@ export default function ContextMenu({
             🔗 Select Entire Group
           </button>
           
-          <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
+          <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }}></div>
           
           {/* --- COLORS --- */}
-          <p style={{paddingLeft: 10, fontSize: '0.75rem', color: '#888'}}>COLOR</p>
+          <p style={{paddingLeft: 10, fontSize: '0.75rem', color: 'var(--text-muted)'}}>COLOR</p>
           <button onClick={() => handleAction('setNodeColor', { background: '#66bb6a', text: '#fff' })}>Green (Start)</button>
           <button onClick={() => handleAction('setNodeColor', { background: '#ef5350', text: '#fff' })}>Red (End)</button>
           <button onClick={() => handleAction('setNodeColor', { background: '#ffee58', text: '#222' })}>Yellow (Important)</button>
