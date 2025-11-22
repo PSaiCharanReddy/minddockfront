@@ -9,21 +9,37 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 15px; /* Reduced padding slightly */
   z-index: 1000;
   box-shadow: 0 2px 10px var(--shadow-color);
-  box-sizing: border-box;
+  box-sizing: border-box; /* Critical for preventing overflow */
   backdrop-filter: blur(10px);
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 .top-bar-section {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
 }
 
 .top-bar-section.left {
-  min-width: 200px;
+  flex-shrink: 0; /* Prevent logo from squishing */
+  min-width: auto;
+  margin-right: 20px;
+}
+
+.top-bar-section.center {
+  flex-grow: 1;
+  justify-content: center;
+  gap: 5px; /* Tighter gap between buttons */
+  overflow: hidden; /* Hide potential overflow */
+}
+
+.top-bar-section.right {
+  flex-shrink: 0;
+  margin-left: 20px;
+  justify-content: flex-end;
 }
 
 .app-title {
@@ -45,10 +61,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  max-width: 150px;
 }
 
-/* Tool Buttons (Center) */
+/* --- Tool Buttons --- */
 .tool-btn {
   display: flex;
   align-items: center;
@@ -56,12 +72,13 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  padding: 8px 16px;
+  padding: 8px 12px; /* Smaller horizontal padding */
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .tool-btn:hover {
@@ -69,9 +86,9 @@
   color: var(--text-main);
 }
 
-.tool-btn:active {
+.tool-btn.active {
+  color: var(--accent-color);
   background-color: var(--bg-input);
-  border-color: var(--border-color);
 }
 
 /* Icon Buttons (Left/Right) */
@@ -99,55 +116,51 @@
   background-color: rgba(0, 122, 255, 0.1);
 }
 
-.ai-btn:hover {
-  background-color: var(--accent-color);
-  color: white;
+.notification-btn {
+  padding: 8px;
+  width: auto;
+  min-width: 36px;
+  justify-content: center;
 }
 
-/* Mobile Adjustments */
-@media (max-width: 768px) {
+.divider-vertical {
+  width: 1px;
+  height: 20px;
+  background-color: var(--border-color);
+  margin: 0 5px;
+}
+
+/* --- RESPONSIVE MAGIC --- */
+
+/* On medium screens (Laptops/Tablets), hide the text labels of less critical items */
+@media (max-width: 1200px) {
+  .tool-btn span {
+    display: none; /* Hide text if you use <span>...</span> inside buttons */
+  }
+  /* Since we didn't use spans in the JSX, we hide text by font-size hack or just icon mode */
+  .tool-btn {
+    font-size: 0; /* Hides text */
+    gap: 0;
+    padding: 10px; /* Square-ish button */
+  }
+  .tool-btn svg {
+    font-size: 1.2rem; /* Restore icon size */
+  }
+  .map-title {
+    max-width: 100px; /* Shrink title */
+  }
+}
+
+/* On mobile screens, hide the center section entirely (move to a hamburger menu later if needed) 
+   OR just show critical icons */
+@media (max-width: 600px) {
   .top-bar-section.center {
-    display: none; /* Hide text buttons on mobile, move to sidebar if needed */
+    display: none; 
   }
   .map-title {
     display: none;
   }
-}
-/* ... existing styles ... */
-
-.divider-vertical {
-  width: 1px;
-  height: 24px;
-  background-color: var(--border-color);
-  margin: 0 10px;
-}
-
-/* Special styling for AI buttons */
-.tool-btn.ai-tool {
-  color: var(--accent-color);
-}
-
-.tool-btn.ai-tool:hover {
-  background-color: rgba(0, 122, 255, 0.1); /* Subtle blue tint */
-}
-
-/* Notification button logic */
-.notification-btn {
-  width: 40px; /* Square-ish icon button */
-  padding: 0;
-  justify-content: center;
-}
-
-/* Make the center section scrollable on very small screens if needed */
-@media (max-width: 900px) {
-  .top-bar-section.center {
-    gap: 5px;
-  }
-  .tool-btn {
-    font-size: 0; /* Hide text on tablets */
-    padding: 10px;
-  }
-  .tool-btn svg {
-    font-size: 20px; /* Keep icons big */
+  .top-bar {
+    padding: 0 10px;
   }
 }
