@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ReactFlow, Background, Controls } from '@xyflow/react';
-import { AiOutlineUnorderedList, AiOutlineNodeIndex, AiOutlineClose, AiOutlineSave } from 'react-icons/ai';
+import { 
+  AiOutlineUnorderedList, 
+  AiOutlineNodeIndex, 
+  AiOutlineClose, 
+  AiOutlineSave, 
+  AiOutlineAppstore 
+} from 'react-icons/ai';
 import apiClient from '../api';
+import Kanban from './Kanban'; // Ensure you have the Kanban component from previous steps
 import './TimetableFull.css';
 
 // --- Editable Node Component ---
@@ -10,6 +17,7 @@ const ScheduleNode = ({ id, data }) => {
   const [label, setLabel] = useState(data.label);
   const [description, setDescription] = useState(data.description);
   
+  // Helper to format Date for input
   const formatForInput = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -81,7 +89,7 @@ const ScheduleNode = ({ id, data }) => {
 const nodeTypes = { scheduleNode: ScheduleNode };
 
 export default function TimetableFull({ isOpen, onClose }) {
-  const [mode, setMode] = useState('nodes');
+  const [mode, setMode] = useState('table'); // 'table', 'board', 'nodes'
   const [tasks, setTasks] = useState([]);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -101,6 +109,7 @@ export default function TimetableFull({ isOpen, onClose }) {
     }
   };
 
+  // Handle visual node updates
   const handleTaskUpdate = async (nodeId, newData) => {
     const taskId = parseInt(nodeId.replace('t-', ''));
     const originalTask = tasks.find(t => t.id === taskId);
@@ -114,15 +123,29 @@ export default function TimetableFull({ isOpen, onClose }) {
     };
 
     try {
-        // Optimistic update for demo purposes
+        // Update local state
         const newTasks = tasks.map(t => t.id === taskId ? updatedTask : t);
         newTasks.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
         setTasks(newTasks);
         generateVisualSchedule(newTasks);
         
-        // In a real app: await apiClient.put(`/tasks/${taskId}`, updatedTask);
+        // In a real app, send PUT request here
+        // await apiClient.put(`/tasks/${taskId}`, updatedTask);
     } catch (error) {
       console.error("Update failed", error);
+    }
+  };
+
+  // Handle Kanban drag and drop updates
+  const handleKanbanUpdate = async (task, isCompleted) => {
+    const updatedTasks = tasks.map(t => t.id === task.id ? { ...t, is_completed: isCompleted } : t);
+    setTasks(updatedTasks);
+    
+    try {
+      await apiClient.put(`/tasks/${task.id}/status?completed=${isCompleted}`);
+    } catch (error) {
+      console.error("Update failed", error);
+      fetchTasks(); 
     }
   };
 
@@ -184,6 +207,9 @@ export default function TimetableFull({ isOpen, onClose }) {
             <button className={mode === 'table' ? 'active' : ''} onClick={() => setMode('table')}>
               <AiOutlineUnorderedList /> List
             </button>
+            <button className={mode === 'board' ? 'active' : ''} onClick={() => setMode('board')}>
+              <AiOutlineAppstore /> Board
+            </button>
             <button className={mode === 'nodes' ? 'active' : ''} onClick={() => setMode('nodes')}>
               <AiOutlineNodeIndex /> Visual Flow
             </button>
@@ -192,7 +218,7 @@ export default function TimetableFull({ isOpen, onClose }) {
         </div>
 
         <div className="timetable-content">
-          {mode === 'table' ? (
+          {mode === 'table' && (
             <div className="simple-list">
               {tasks.map(task => (
                 <div key={task.id} className="simple-task-row">
@@ -206,7 +232,13 @@ export default function TimetableFull({ isOpen, onClose }) {
                 </div>
               ))}
             </div>
-          ) : (
+          )}
+
+          {mode === 'board' && (
+            <Kanban tasks={tasks} onUpdateTaskStatus={handleKanbanUpdate} />
+          )}
+
+          {mode === 'nodes' && (
             <div className="visual-schedule-wrapper">
               <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
                 <Background color="#222" gap={20} />

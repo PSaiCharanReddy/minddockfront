@@ -18,6 +18,19 @@ import {
 
 import { toPng } from 'html-to-image';
 import confetti from 'canvas-confetti'; 
+import { 
+  AiOutlineLoading, 
+  AiOutlineDownload, 
+  AiOutlineCalendar, 
+  AiOutlineTrophy, 
+  AiOutlineHome, 
+  AiOutlineBook, 
+  AiOutlineSearch, 
+  AiOutlineBell, 
+  AiFillBell,
+  AiOutlineBulb 
+} from 'react-icons/ai'; 
+import { BsChatDots } from 'react-icons/bs';
 import { AiOutlinePlus } from 'react-icons/ai';
 
 import '@xyflow/react/dist/style.css';
@@ -29,9 +42,12 @@ import ContextMenu from './Components/ContextMenu';
 import AIChat from './Components/AIChat';
 import Sidebar from './Components/Sidebar';
 import RightPanel from './Components/RightPanel';
+import Timetable from './Components/Timetable';
 import TimetableFull from './Components/TimetableFull';
+import Goals from './Components/Goals';
 import NodeDetails from './Components/NodeDetails';
 import Dashboard from './Components/Dashboard';
+import Journal from './Components/Journal';
 import CommandPalette from './Components/CommandPalette';
 import Recommendations from './Components/Recommendations';
 import TopBar from './Components/TopBar';
@@ -41,6 +57,7 @@ import { useNotifications } from './hooks/useNotifications';
 
 let nodeId = 1000;
 
+// --- Node Type Wrapper ---
 function MindNode(props) {
   const { setNodes } = useReactFlow();
   const updateNodeLabel = useCallback((nodeId, label) => {
@@ -67,7 +84,7 @@ function App() {
   const [currentMapId, setCurrentMapId] = useState(null);
   const [currentMapTitle, setCurrentMapTitle] = useState("");
 
-  // --- UI STATE ---
+  // --- UI State ---
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
   const [rightPanel, setRightPanel] = useState({ isOpen: false, tab: 'tasks' });
   
@@ -82,7 +99,8 @@ function App() {
   const [aiLoadingNode, setAiLoadingNode] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
+  
+  // --- Data State ---
   const [tasks, setTasks] = useState([]);
   const [goals, setGoals] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -121,7 +139,8 @@ function App() {
 
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
-  // --- 2. THEME ---
+  // --- 2. UI HELPERS (FIXED LOGIC HERE) ---
+  
   useEffect(() => {
     if (theme === 'light') document.body.classList.add('light-mode'); 
     else document.body.classList.remove('light-mode');
@@ -129,8 +148,10 @@ function App() {
   }, [theme]);
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
-  // --- 3. UI HELPERS (UPDATED LOGIC) ---
-  
+  const triggerConfetti = () => {
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+  };
+
   const closeRightPanel = () => {
     setRightPanel(prev => ({ ...prev, isOpen: false }));
   };
@@ -142,28 +163,27 @@ function App() {
     setContextMenu(null);
   };
 
-  // FIX: Close Chat when opening Sidebar tools
   const toggleRightPanel = (tab) => {
     if (rightPanel.isOpen && rightPanel.tab === tab) {
       closeRightPanel();
     } else {
-      setIsChatOpen(false); // <--- Auto-close Chat
+      setIsChatOpen(false); // <--- FIX: Force Chat Closed
       setRightPanel({ isOpen: true, tab: tab });
     }
   };
 
-  // FIX: Close Right Panel when opening Chat
   const toggleChat = () => {
     if (!isChatOpen) {
-      closeRightPanel(); // <--- Auto-close Sidebar
+        closeRightPanel(); // <--- FIX: Force Right Panel Closed
     }
     setIsChatOpen(!isChatOpen);
     setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
   };
 
-  // --- 4. MAP LOGIC ---
+  // --- 3. MAP LOGIC ---
   const loadMap = async (id) => {
     if (id === null) { setCurrentMapId(null); setCurrentMapTitle("Dashboard"); return; }
+    
     setIsLoading(true); isLoaded.current = false;
     try { 
       const response = await apiClient.get(`/map/${id}`);
@@ -172,6 +192,7 @@ function App() {
       setCurrentMapId(id);
       setCurrentMapTitle(response.data.title);
       setIsLeftSidebarOpen(false);
+      
       if (response.data.nodes?.length > 0) { 
         const maxId = Math.max(0, ...response.data.nodes.map(n => parseInt(n.id, 10) || 0)); 
         nodeId = maxId + 100; 
@@ -220,7 +241,7 @@ function App() {
     }, 1500);
   }, [nodes, edges, currentMapId, maps]);
 
-  // --- 5. ACTIONS ---
+  // --- 4. ACTIONS ---
   const downloadImage = async () => {
     await rfInstance.fitView({ padding: 0.4 });
     setTimeout(() => {
@@ -235,9 +256,9 @@ function App() {
     if (item.type === 'node') {
       rfInstance.fitView({ nodes: [{ id: item.id }], duration: 800, padding: 2 });
       setNodes(nds => nds.map(n => ({...n, selected: n.id === item.id})));
-    } else if (item.type === 'task') toggleRightPanel('tasks'); 
-    else if (item.type === 'goal') toggleRightPanel('goals'); 
-    else if (item.type === 'note') toggleRightPanel('journal');
+    } else if (item.type === 'task') { toggleRightPanel('tasks'); } 
+    else if (item.type === 'goal') { toggleRightPanel('goals'); } 
+    else if (item.type === 'note') { toggleRightPanel('journal'); }
   };
 
   const saveNodeDetails = (id, details) => {
@@ -253,7 +274,7 @@ function App() {
     try {
       await apiClient.put(`/tasks/${task.id}/status?completed=true`);
       fetchAllData();
-      confetti({particleCount:100, spread:70, origin:{y:0.6}});
+      triggerConfetti();
     } catch(e) { console.error(e); }
   };
 
@@ -276,7 +297,7 @@ function App() {
     } catch (error) { console.error("Failed to add goal:", error); }
   };
 
-  // --- 6. AI LOGIC ---
+  // --- 5. AI LOGIC ---
   const planRoadmapSchedule = async (startNodeId) => {
     const connectedNodes = [];
     const queue = [startNodeId];
@@ -365,32 +386,12 @@ function App() {
     setTimeout(() => rfInstance.fitView({ duration: 500, nodes: newNodes }), 100);
   }, [rfInstance, setNodes, setEdges, nodes, edges, takeSnapshot]);
 
-  // --- 7. COPY/PASTE & SELECTION ---
+  // --- 6. COPY/PASTE ---
   const handleCopy = useCallback(() => { const selectedNodes = nodes.filter((n) => n.selected); const selectedEdges = edges.filter((e) => e.selected); if (selectedNodes.length > 0) setClipboard({ nodes: selectedNodes, edges: selectedEdges }); }, [nodes, edges]);
   const handlePaste = useCallback(() => { if (!clipboard || !clipboard.nodes.length) return; takeSnapshot(nodes, edges); const { x, y, zoom } = rfInstance.getViewport(); const centerX = -x / zoom + (window.innerWidth / 2) / zoom; const centerY = -y / zoom + (window.innerHeight / 2) / zoom; const copiedBounds = getNodesBounds(clipboard.nodes); const offsetX = centerX - (copiedBounds.x + copiedBounds.width / 2); const offsetY = centerY - (copiedBounds.y + copiedBounds.height / 2); const idMap = new Map(); const newNodes = []; const newEdges = []; clipboard.nodes.forEach((node) => { const newId = `${nodeId++}`; idMap.set(node.id, newId); newNodes.push({ ...node, id: newId, selected: true, position: { x: node.position.x + offsetX, y: node.position.y + offsetY }, data: { ...node.data } }); }); clipboard.edges.forEach((edge) => { const newSource = idMap.get(edge.source); const newTarget = idMap.get(edge.target); if (newSource && newTarget) { newEdges.push({ ...edge, id: `e-${newSource}-${newTarget}-${Date.now()}`, source: newSource, target: newTarget, selected: true }); } }); setNodes([...nodes.map(n => ({ ...n, selected: false })), ...newNodes]); setEdges([...edges.map(e => ({ ...e, selected: false })), ...newEdges]); }, [clipboard, nodes, edges, rfInstance, takeSnapshot]);
   const selectConnectedGroup = useCallback((startNodeId) => { const connectedNodeIds = new Set(); const connectedEdgeIds = new Set(); const queue = [startNodeId]; connectedNodeIds.add(startNodeId); while (queue.length > 0) { const curr = queue.shift(); const relEdges = edges.filter(e => e.source === curr || e.target === curr); relEdges.forEach(edge => { connectedEdgeIds.add(edge.id); const neighbor = edge.source === curr ? edge.target : edge.source; if (!connectedNodeIds.has(neighbor)) { connectedNodeIds.add(neighbor); queue.push(neighbor); } }); } setNodes((nds) => nds.map((n) => ({ ...n, selected: connectedNodeIds.has(n.id) }))); setEdges((eds) => eds.map((e) => ({ ...e, selected: connectedEdgeIds.has(e.id) }))); }, [nodes, edges, setNodes, setEdges]);
 
-  useEffect(() => { const handleKeyDown = (e) => { 
-    if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return; 
-    const isCtrl = e.metaKey || e.ctrlKey; 
-    if (isCtrl && e.key === 'k') { e.preventDefault(); setIsPaletteOpen(prev => !prev); return; } 
-    if (isCtrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(nodes, edges, setNodes, setEdges); } 
-    if ((isCtrl && e.key === 'y') || (isCtrl && e.shiftKey && e.key === 'z')) { e.preventDefault(); redo(nodes, edges, setNodes, setEdges); } 
-    if (isCtrl && e.key === 'c') { e.preventDefault(); handleCopy(); } 
-    if (isCtrl && e.key === 'v') { e.preventDefault(); handlePaste(); } 
-  }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [nodes, edges, undo, redo, handleCopy, handlePaste]);
-
-  // --- 8. REACT FLOW HANDLERS ---
-  const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes]);
-  const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
-  const onNodesDelete = useCallback(() => { takeSnapshot(nodes, edges); }, [nodes, edges, takeSnapshot]);
-  const addNode = useCallback((options) => {
-    takeSnapshot(nodes, edges);
-    const newNode = { id: `${nodeId++}`, type: 'mindNode', position: options.position || { x: 100, y: 100 }, data: { label: 'Untitled', style: { backgroundColor: '#2a2a2a', color: '#f0f0f0' }, summary: '' } };
-    setNodes((nds) => nds.concat(newNode)); return newNode;
-  }, [setNodes, nodes, edges, takeSnapshot]);
-
+  // --- 7. MENUS ---
   const handlePaneClick = useCallback(() => setContextMenu(null), []);
   const onNodeContextMenu = useCallback((event, node) => { event.preventDefault(); setContextMenu({ id: node.id, node: node, type: 'node', top: event.clientY, left: event.clientX }); }, []);
   const onEdgeContextMenu = useCallback((event, edge) => { event.preventDefault(); setContextMenu({ id: edge.id, type: 'edge', top: event.clientY, left: event.clientX }); }, []);
@@ -398,7 +399,6 @@ function App() {
 
   const handleMenuAction = useCallback((action, payload) => {
     if (['setNodeColor', 'setEdgeStyle'].includes(action)) takeSnapshot(nodes, edges);
-    
     if (action === 'editDetails') { setSelectedNodeForDetails(contextMenu.node); }
     else if (action === 'addToTimetable') addToTimetable(contextMenu.node);
     else if (action === 'planRoadmap') planRoadmapSchedule(contextMenu.id);
@@ -409,6 +409,27 @@ function App() {
     else if (action === 'setEdgeStyle') setEdges((eds) => eds.map((e) => e.id === contextMenu.id ? { ...e, markerEnd: payload === 'directional' ? { type: MarkerType.ArrowClosed } : undefined, style: payload === 'dotted' ? { strokeDasharray: '5 5' } : {} } : e));
     setContextMenu(null);
   }, [contextMenu, setNodes, setEdges, generateRoadmap, takeSnapshot, nodes, edges, selectConnectedGroup]);
+
+  // --- 8. SHORTCUTS & HANDLERS ---
+  useEffect(() => { const handleKeyDown = (e) => { 
+    if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return; 
+    const isCtrl = e.metaKey || e.ctrlKey; 
+    if (isCtrl && e.key === 'k') { e.preventDefault(); setIsPaletteOpen(prev => !prev); return; } 
+    if (isCtrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(nodes, edges, setNodes, setEdges); } 
+    if ((isCtrl && e.key === 'y') || (isCtrl && e.shiftKey && e.key === 'z')) { e.preventDefault(); redo(nodes, edges, setNodes, setEdges); } 
+    if (isCtrl && e.key === 'c') { e.preventDefault(); handleCopy(); } 
+    if (isCtrl && e.key === 'v') { e.preventDefault(); handlePaste(); } 
+  }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [nodes, edges, undo, redo, handleCopy, handlePaste]);
+
+  const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes]);
+  const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
+  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  const onNodesDelete = useCallback(() => { takeSnapshot(nodes, edges); }, [nodes, edges, takeSnapshot]);
+  const addNode = useCallback((options) => {
+    takeSnapshot(nodes, edges);
+    const newNode = { id: `${nodeId++}`, type: 'mindNode', position: options.position || { x: 100, y: 100 }, data: { label: 'Untitled', style: { backgroundColor: '#2a2a2a', color: '#f0f0f0' }, summary: '' } };
+    setNodes((nds) => nds.concat(newNode)); return newNode;
+  }, [setNodes, nodes, edges, takeSnapshot]);
 
   const nodeTypes = useMemo(() => ({ mindNode: (props) => <MindNode {...props} aiLoadingNode={aiLoadingNode} /> }), [aiLoadingNode]);
 
@@ -430,17 +451,13 @@ function App() {
         notificationPermission={permission}
         theme={theme}
         currentMapTitle={currentMapTitle || "Dashboard"}
+        onGoHome={() => loadMap(null)}
       />
 
       <div className="react-flow-wrapper" ref={reactFlowWrapper} style={{ marginTop: '60px' }}>
         
         <div className="top-right-ui">
           <div className="save-indicator">{isSaving ? "Saving..." : "Saved"}</div>
-          {currentMapId && (
-            <button onClick={() => loadMap(null)} className="chat-toggle-btn" title="Home Dashboard" style={{fontSize:'1.2rem'}}>
-              <AiOutlineHome />
-            </button>
-          )}
         </div>
 
         {currentMapId ? (
@@ -454,27 +471,31 @@ function App() {
                 onPaneContextMenu={onPaneContextMenu}
               >
                 <Background />
-                <Controls style={{ bottom: 20, left: 20, top: 'auto', transform: 'none' }} />
+                <Controls />
                 <MiniMap nodeColor={(n) => n.style?.backgroundColor || (theme === 'light' ? '#fff' : '#333')} style={{ backgroundColor: theme === 'light' ? '#fff' : '#1a1a1a', border: '1px solid #888' }} zoomable pannable />
               </ReactFlow>
           </>
         ) : (
           <div className="dashboard-wrapper" style={{width:'100%', height:'100%', overflowY:'auto'}}>
-             {isLoading ? <div className="loading-screen">Loading MindDock...</div> : 
+             {isLoading ? (
+                <div className="loading-screen">Loading MindDock...</div>
+             ) : (
                 <Dashboard 
                   onOpenMap={loadMap} 
                   onOpenTimetable={() => toggleRightPanel('tasks')} 
                   onOpenGoals={() => toggleRightPanel('goals')} 
                 />
-             }
+             )}
           </div>
         )}
 
         {contextMenu && <ContextMenu {...contextMenu} onAction={handleMenuAction} />}
       </div>
       
+      {/* --- SIDEBARS --- */}
       <Sidebar maps={maps} currentMapId={currentMapId} onSelectMap={loadMap} onCreateMap={createMap} onDeleteMap={deleteMap} isOpen={isLeftSidebarOpen} toggleSidebar={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)} />
       
+      {/* --- UNIFIED RIGHT PANEL --- */}
       <RightPanel 
         isOpen={rightPanel.isOpen} 
         onClose={closeRightPanel} 
@@ -483,22 +504,24 @@ function App() {
         taskRefreshTrigger={taskRefreshTrigger}
       />
 
-      <AIChat nodes={nodes} edges={edges} tasks={tasks} goals={goals} notes={notes} selectedNodes={nodes.filter(n => n.selected)} onAiGeneratedMap={onAiGeneratedMap} isOpen={isChatOpen} toggleChat={toggleChat} />
-      
-      {isTimetableFullOpen && <TimetableFull isOpen={isTimetableFullOpen} onClose={() => setIsTimetableFullOpen(false)} />}
-      
-      <NodeDetails node={selectedNodeForDetails} isOpen={!!selectedNodeForDetails} onClose={() => setSelectedNodeForDetails(null)} onSave={saveNodeDetails} />
-      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} nodes={nodes} tasks={tasks} goals={goals} notes={notes} onNavigate={handleNavigate} />
-      
-      <Recommendations 
-        isOpen={isRecOpen} 
-        onClose={() => setIsRecOpen(false)} 
+      {/* --- AI CHAT --- */}
+      <AIChat 
+        nodes={nodes} 
+        edges={edges} 
         tasks={tasks} 
         goals={goals} 
-        notes={notes} 
-        onRefresh={fetchAllData} 
+        notes={notes}
+        selectedNodes={nodes.filter(n => n.selected)} 
+        onAiGeneratedMap={onAiGeneratedMap} 
+        isOpen={isChatOpen} 
+        toggleChat={toggleChat} 
       />
-
+      
+      {/* --- MODALS --- */}
+      {isTimetableFullOpen && <TimetableFull isOpen={isTimetableFullOpen} onClose={() => setIsTimetableFullOpen(false)} />}
+      <NodeDetails node={selectedNodeForDetails} isOpen={!!selectedNodeForDetails} onClose={() => setSelectedNodeForDetails(null)} onSave={saveNodeDetails} />
+      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} nodes={nodes} tasks={tasks} goals={goals} notes={notes} onNavigate={handleNavigate} />
+      <Recommendations isOpen={isRecOpen} onClose={() => setIsRecOpen(false)} tasks={tasks} goals={goals} notes={notes} onRefresh={fetchAllData} />
       {focusTask && <FocusMode task={focusTask} onClose={() => setFocusTask(null)} onComplete={handleTaskComplete} />}
     </div>
   );
