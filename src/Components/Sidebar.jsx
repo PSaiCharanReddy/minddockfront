@@ -66,16 +66,17 @@ export default function Sidebar({
         <div className="sidebar-footer">
           {isCreating ? (
             <form onSubmit={handleCreate} className="create-map-form">
-              <input 
-                autoFocus
-                type="text" 
-                placeholder="Map Name..."
-                value={newMapTitle}
-                onChange={(e) => setNewMapTitle(e.target.value)}
-                onBlur={() => !newMapTitle && setIsCreating(false)}
-              />
-              <button type="submit">Go</button>
-            </form>
+  <textarea
+    autoFocus
+    placeholder="Map Name..."
+    value={newMapTitle}
+    onChange={(e) => setNewMapTitle(e.target.value)}
+    onBlur={() => !newMapTitle && setIsCreating(false)}
+    rows={1}   // starts as a single line
+  />
+  <button type="submit">Go</button>
+</form>
+
           ) : (
             <button className="create-map-btn" onClick={() => setIsCreating(true)}>
               <AiOutlinePlus /> New Map

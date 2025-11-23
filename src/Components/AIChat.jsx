@@ -3,8 +3,16 @@ import { AiOutlineClose, AiOutlineSend } from 'react-icons/ai';
 import apiClient from '../api';
 import './AIChat.css';
 
-// We accept 'tasks', 'goals', and 'notes' as props so the AI can see them
-function AIChat({ nodes, edges, tasks, goals, notes, onAiGeneratedMap, isOpen, toggleChat }) {
+// We accept 'tasks', 'goals', 'notes' for context
+// AND 'onAiAction', 'onAiCreateGoal', 'onAiCreateTask' for executing commands
+function AIChat({ 
+  nodes, edges, tasks, goals, notes, 
+  onAiGeneratedMap, 
+  onAiCreateGoal, // <-- New Prop
+  onAiCreateTask, // <-- New Prop
+  onAiAction,     // <-- New Prop (For Deleting)
+  isOpen, toggleChat 
+}) {
   const [messages, setMessages] = useState([
     { from: 'ai', text: 'Hello! How can I help you organize your mind?' }
   ]);
@@ -35,27 +43,43 @@ function AIChat({ nodes, edges, tasks, goals, notes, onAiGeneratedMap, isOpen, t
     }));
     
     // Clean circular references from nodes before sending
-    const cleanNodes = nodes.map(({ selected, dragging, ...node }) => node);
+    const cleanNodes = nodes ? nodes.map(({ selected, dragging, ...node }) => node) : [];
 
     try {
-      // --- THIS IS THE CRITICAL PART ---
-      // We send ALL data (Nodes, Edges, Tasks, Goals, Notes) to the AI
       const response = await apiClient.post('/ai/chat', {
         messages: apiMessages,
         nodes: cleanNodes,
-        edges: edges,
+        edges: edges || [],
         tasks: tasks || [], 
         goals: goals || [],
         notes: notes || []
       });
-      // --------------------------------
 
-      const aiReply = { from: 'ai', text: response.data.reply };
+      const data = response.data;
+      const aiReply = { from: 'ai', text: data.reply };
       setMessages([...newMessages, aiReply]);
 
-      // If AI generated a new map, render it
-      if (response.data.newMapData && response.data.newMapData.nodes && response.data.newMapData.nodes.length > 0) {
-        onAiGeneratedMap(response.data.newMapData);
+      // --- HANDLE AI ACTIONS ---
+
+      // 1. Generate Map
+      if (data.newMapData && data.newMapData.nodes && data.newMapData.nodes.length > 0) {
+        onAiGeneratedMap(data.newMapData);
+      }
+
+      // 2. Create Goal
+      if (data.newGoal && onAiCreateGoal) {
+        onAiCreateGoal(data.newGoal);
+      }
+
+      // 3. Create Task
+      if (data.newTask && onAiCreateTask) {
+        onAiCreateTask(data.newTask);
+      }
+
+      // 4. System Command (DELETE)
+      // This handles "DELETE_ALL_TASKS" or "DELETE_ALL_GOALS"
+      if (data.action_command && onAiAction) {
+        onAiAction(data.action_command);
       }
 
     } catch (error) {
@@ -91,7 +115,7 @@ function AIChat({ nodes, edges, tasks, goals, notes, onAiGeneratedMap, isOpen, t
         ))}
         {isLoading && (
           <div className="chat-message ai">
-            <p>...</p>
+            <p>Thinking...</p>
           </div>
         )}
       </div>

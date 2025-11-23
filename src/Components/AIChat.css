@@ -56,6 +56,8 @@
   padding: 10px;
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-panel);
+
+  margin-bottom: 70px;
   /* Critical for Mobile */
   padding-bottom: max(10px, env(safe-area-inset-bottom)); 
 }

@@ -532,6 +532,24 @@ function App() {
         onAiGeneratedMap={onAiGeneratedMap} 
         isOpen={isChatOpen} 
         toggleChat={toggleChat} 
+        onAiAction={async (command) => {
+            if (command === "DELETE_ALL_TASKS") {
+                if(!window.confirm("AI is requesting to delete ALL tasks. Proceed?")) return;
+                try {
+                    // In a real app, use DELETE /tasks/all endpoint.
+                    // Here we loop for MVP safety.
+                    for (const t of tasks) {
+                        await apiClient.delete(`/tasks/${t.id}`);
+                    }
+                    await fetchAllData();
+                } catch(e) { console.error(e); }
+            }
+            if (command === "DELETE_ALL_GOALS") {
+                if(!window.confirm("Delete ALL goals?")) return;
+                for (const g of goals) await apiClient.delete(`/goals/${g.id}`);
+                await fetchAllData();
+            }
+        }}
       />
       
       {/* --- MODALS --- */}
