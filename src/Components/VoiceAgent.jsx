@@ -13,6 +13,7 @@ export default function VoiceAgent({
   onCreateTask,
   onDeleteAction,
   onNavigate,
+  onCreateMap,  // NEW: callback to create named map
   tasks, 
   goals, 
   notes, 
@@ -36,7 +37,6 @@ export default function VoiceAgent({
     return () => stopListening();
   }, [isOpen]);
 
-  // CLEAN TEXT FOR VOICE (Remove emojis and unwanted chars)
   const cleanTextForVoice = (text) => {
     return text
       .replace(/⏳/g, '')
@@ -110,54 +110,133 @@ export default function VoiceAgent({
     setStatus("processing");
     const textLower = text.toLowerCase();
     
+    console.log("🎤 Voice Input:", textLower);
+    
     // ========================================
-    // VOICE NAVIGATION COMMANDS - Direct page transitions
+    // DIRECT ACTIONS (No AI needed)
+    // ========================================
+
+    // Delete Task - DIRECT EXECUTION
+    if (textLower.includes("delete task") || textLower.includes("remove task")) {
+      const taskName = textLower
+        .replace("delete task", "").replace("remove task", "")
+        .trim().replace(/[.,!?;:]/g, '');
+      
+      console.log("🗑️ Direct Delete Task:", taskName);
+      
+      if (taskName) {
+        const matchingTask = tasks.find(t => 
+          t.title.toLowerCase().includes(taskName) || 
+          taskName.includes(t.title.toLowerCase())
+        );
+        
+        if (matchingTask) {
+          speakResponse(`Deleted task ${matchingTask.title}`);
+          if (onDeleteAction) onDeleteAction("DELETE_SPECIFIC_TASK", matchingTask.id);
+          return;
+        } else {
+          speakResponse(`Task ${taskName} not found`);
+          return;
+        }
+      }
+    }
+
+    // Delete Goal - DIRECT EXECUTION
+    if (textLower.includes("delete goal") || textLower.includes("remove goal")) {
+      const goalName = textLower
+        .replace("delete goal", "").replace("remove goal", "")
+        .trim().replace(/[.,!?;:]/g, '');
+      
+      console.log("🗑️ Direct Delete Goal:", goalName);
+      
+      if (goalName) {
+        const matchingGoal = goals.find(g => 
+          g.title.toLowerCase().includes(goalName) || 
+          goalName.includes(g.title.toLowerCase())
+        );
+        
+        if (matchingGoal) {
+          speakResponse(`Deleted goal ${matchingGoal.title}`);
+          if (onDeleteAction) onDeleteAction("DELETE_SPECIFIC_GOAL", matchingGoal.id);
+          return;
+        } else {
+          speakResponse(`Goal ${goalName} not found`);
+          return;
+        }
+      }
+    }
+
+    // Clear All Tasks
+    if (textLower.includes("clear all task") || textLower.includes("delete all task")) {
+      console.log("🗑️ Clear All Tasks");
+      speakResponse("Cleared all tasks");
+      if (onDeleteAction) onDeleteAction("DELETE_ALL_TASKS", null);
+      return;
+    }
+
+    // Clear All Goals
+    if (textLower.includes("clear all goal") || textLower.includes("delete all goal")) {
+      console.log("🗑️ Clear All Goals");
+      speakResponse("Cleared all goals");
+      if (onDeleteAction) onDeleteAction("DELETE_ALL_GOALS", null);
+      return;
+    }
+
+    // NEW: Create Named Map
+    if (textLower.includes("create map") || textLower.includes("new map")) {
+      const mapName = textLower
+        .replace("create map", "").replace("new map", "")
+        .trim().replace(/[.,!?;:]/g, '') || "Untitled Map";
+      
+      console.log("🗺️ Creating Named Map:", mapName);
+      speakResponse(`Creating new map: ${mapName}`);
+      
+      if (onCreateMap) {
+        await onCreateMap(mapName);
+      }
+      return;
+    }
+
+    // ========================================
+    // VOICE NAVIGATION COMMANDS
     // ========================================
     
-    // Dashboard / Home
-    if (['dashboard', 'home', 'go home', 'main menu', 'back to dashboard', 'homepage'].some(cmd => textLower.includes(cmd))) {
+    if (['dashboard', 'home', 'go home', 'main menu', 'homepage'].some(cmd => textLower.includes(cmd))) {
       speakResponse("Taking you to dashboard");
       if (onNavigate) onNavigate('dashboard');
       return;
     }
 
-    // Tasks / Timetable / Schedule
-    if (['task', 'tasks', 'to do', 'todos', 'timetable', 'schedule', 'go to task', 'my tasks', 'show tasks', 'list tasks'].some(cmd => textLower.includes(cmd))) {
-      speakResponse("Opening your tasks and schedule");
+    if (['task', 'tasks', 'to do', 'todos', 'timetable', 'schedule', 'show tasks'].some(cmd => textLower.includes(cmd))) {
+      speakResponse("Opening your tasks");
       if (onNavigate) onNavigate('tasks');
       return;
     }
 
-    // Goals / Objectives
-    if (['goal', 'goals', 'target', 'targets', 'objective', 'go to goal', 'my goals', 'show goals', 'objective'].some(cmd => textLower.includes(cmd))) {
+    if (['goal', 'goals', 'target', 'targets', 'show goals'].some(cmd => textLower.includes(cmd))) {
       speakResponse("Opening your goals");
       if (onNavigate) onNavigate('goals');
       return;
     }
 
-    // Journal / Notes / Diary
-    if (['journal', 'journal entries', 'note', 'notes', 'diary', 'entries', 'go to journal', 'my journal', 'my notes'].some(cmd => textLower.includes(cmd))) {
+    if (['journal', 'notes', 'diary'].some(cmd => textLower.includes(cmd))) {
       speakResponse("Opening your journal");
       if (onNavigate) onNavigate('journal');
       return;
     }
 
-    // Maps - Open Maps View
-    if (['show maps', 'maps view', 'go to maps', 'map list', 'all maps', 'open maps'].some(cmd => textLower.includes(cmd))) {
+    if (['show maps', 'maps view', 'go to maps', 'map list'].some(cmd => textLower.includes(cmd))) {
       speakResponse("Opening your mind maps");
       if (onNavigate) onNavigate('maps');
       return;
     }
 
     // ========================================
-    // AI-POWERED COMMANDS (Create, Brainstorm, etc)
+    // AI-POWERED COMMANDS (Create, Roadmap, etc)
     // ========================================
-    // Don't return after detection - let AI process it below
-    // This ensures proper mindmap creation, task creation, etc.
 
-    // ANALYSIS CHECK (for vision)
     let imageData = null;
-    if (['screen', 'look', 'see', 'analyze map', 'analyze', 'analyze this'].some(w => textLower.includes(w))) {
+    if (['screen', 'look', 'see', 'analyze map', 'analyze'].some(w => textLower.includes(w))) {
       try {
         const viewport = document.querySelector('.react-flow__viewport'); 
         if (viewport) {
@@ -185,15 +264,12 @@ export default function VoiceAgent({
       const reply = response.data.reply;
       const cleanReply = cleanTextForVoice(reply);
       
-      // SPEAK CLEANED RESPONSE
       speakResponse(cleanReply);
 
-      // EXECUTE ACTIONS
-      // 1. Map Generation (highest priority)
+      // 1. Map Generation
       if (response.data.newMapData && response.data.newMapData.nodes && response.data.newMapData.nodes.length > 0) {
-        console.log("📍 Voice: Creating map with", response.data.newMapData.nodes.length, "nodes");
+        console.log("📍 Creating AI map with", response.data.newMapData.nodes.length, "nodes");
         onAction(response.data.newMapData);
-        // Auto-navigate to maps after creating
         setTimeout(() => {
           if (onNavigate) onNavigate('maps');
         }, 500);
@@ -209,7 +285,7 @@ export default function VoiceAgent({
         onCreateTask(response.data.newTask);
       }
 
-      // 4. Delete Actions
+      // 4. Delete Actions (from AI)
       if (response.data.action_command && onDeleteAction) {
         onDeleteAction(response.data.action_command, response.data.target_id);
       }
@@ -259,14 +335,17 @@ export default function VoiceAgent({
         {transcript && <p className="voice-transcript">"{transcript}"</p>}
         
         <div className="voice-commands">
-          <p className="commands-title">💡 Navigation & Creation:</p>
+          <p className="commands-title">💡 Voice Commands:</p>
           <ul>
-            <li>🗺️ Navigation: "Go to dashboard", "Show tasks", "Open goals", "My journal", "Maps view"</li>
-            <li>📝 Create: "Create task: buy milk", "Create goal: learn coding"</li>
-            <li>🛣️ Maps: "Create roadmap for Python", "Brainstorm ideas for app"</li>
-            <li>❌ Delete: "Delete task eat", "Clear all tasks"</li>
-            <li>📊 Query: "List my tasks", "Show all goals", "Analyze my progress"</li>
-            <li>❌ Exit: Say "stop", "exit", "close", or "goodbye"</li>
+            <li>🗺️ "Create map: [name]" - Creates new map with name</li>
+            <li>🛣️ "Create roadmap for [topic]" - AI roadmap</li>
+            <li>🧠 "Brainstorm [topic]" - AI brainstorm</li>
+            <li>✅ "Create task: [what]" - Add task</li>
+            <li>🎯 "Create goal: [goal]" - Add goal</li>
+            <li>🗑️ "Delete task: [name]" - Delete task</li>
+            <li>🗑️ "Delete goal: [name]" - Delete goal</li>
+            <li>📊 "Show tasks", "Show goals", "Open journal"</li>
+            <li>❌ "Stop" - Exit voice</li>
           </ul>
         </div>
       </div>

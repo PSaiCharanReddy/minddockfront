@@ -611,14 +611,12 @@ function App() {
         }}
         onDeleteAction={async (command, targetId) => {
           if (command === "DELETE_ALL_TASKS") {
-            if (!window.confirm("Delete ALL tasks?")) return;
             try {
               for (const t of tasks) await apiClient.delete(`/tasks/${t.id}`);
               await fetchAllData();
             } catch(e) { console.error(e); }
           }
           if (command === "DELETE_ALL_GOALS") {
-            if (!window.confirm("Delete ALL goals?")) return;
             for (const g of goals) await apiClient.delete(`/goals/${g.id}`);
             await fetchAllData();
           }
@@ -641,6 +639,15 @@ function App() {
           else if (page === 'goals') toggleRightPanel('goals');
           else if (page === 'journal') toggleRightPanel('journal');
           else if (page === 'maps') setIsLeftSidebarOpen(true);
+        }}
+        onCreateMap={async (mapName) => {
+          try {
+            const res = await apiClient.post('/map/', { title: mapName });
+            await loadMap(res.data.id);
+            setIsLeftSidebarOpen(false);
+          } catch(e) { 
+            console.error("Failed to create map:", e); 
+          }
         }}
          tasks={tasks}
          goals={goals}
