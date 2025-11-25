@@ -50,6 +50,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s;
+}
+
+.timetable-input-area button:hover:not(:disabled) {
+  background-color: var(--accent-hover, #5b9dff);
 }
 
 /* Task List */
@@ -75,9 +80,10 @@
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-.task-item:hover {
+.task-item:hover:not(.editing) {
   border-color: var(--accent-color);
   transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
 .task-item.completed {
@@ -107,6 +113,7 @@
   color: white;
   background-color: transparent;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .checkbox.checked {
@@ -114,7 +121,11 @@
   background-color: var(--accent-color);
 }
 
-.task-info { display: flex; flex-direction: column; }
+.task-info { 
+  display: flex; 
+  flex-direction: column;
+  flex: 1;
+}
 
 .task-title {
   font-size: 0.95rem;
@@ -130,6 +141,31 @@
 .task-time {
   font-size: 0.75rem;
   color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Task Actions */
+.task-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.edit-task-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 5px;
+  font-size: 16px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.edit-task-btn:hover {
+  color: var(--accent-color);
 }
 
 .delete-task-btn {
@@ -140,11 +176,173 @@
   padding: 5px;
   font-size: 16px;
   transition: color 0.2s;
+  display: flex;
+  align-items: center;
 }
-.delete-task-btn:hover { color: #ff453a; }
+
+.delete-task-btn:hover { 
+  color: #ff453a; 
+}
+
+/* EDIT MODE */
+.task-item.editing {
+  background-color: var(--bg-input);
+  border: 2px solid var(--accent-color);
+  padding: 15px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.edit-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-title {
+  width: 100%;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.edit-title:focus {
+  border-color: var(--accent-color);
+}
+
+.edit-datetime {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.edit-date,
+.edit-time {
+  flex: 1;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.edit-date:focus,
+.edit-time:focus {
+  border-color: var(--accent-color);
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.save-btn {
+  flex: 1;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.save-btn:hover {
+  background-color: var(--accent-hover, #5b9dff);
+}
+
+.cancel-btn {
+  background-color: var(--bg-panel);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  border-color: #ff453a;
+  color: #ff453a;
+}
 
 /* Common Buttons */
 .icon-btn, .close-btn {
-  background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px;
+  background: transparent; 
+  border: none; 
+  color: var(--text-muted); 
+  cursor: pointer; 
+  font-size: 18px;
+  transition: color 0.2s;
 }
-.icon-btn:hover, .close-btn:hover { color: var(--text-main); }
+
+.icon-btn:hover, .close-btn:hover { 
+  color: var(--text-main); 
+}
+
+/* Empty State */
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty-state p {
+  margin: 0 0 5px 0;
+  font-size: 1rem;
+}
+
+.empty-state small {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Scrollbar Styling */
+.task-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.task-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .timetable-header h3 {
+    font-size: 1rem;
+  }
+  
+  .edit-datetime {
+    flex-direction: column;
+  }
+  
+  .edit-date,
+  .edit-time {
+    width: 100%;
+  }
+}

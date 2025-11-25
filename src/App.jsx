@@ -531,7 +531,25 @@ function App() {
         selectedNodes={nodes.filter(n => n.selected)} 
         onAiGeneratedMap={onAiGeneratedMap} 
         isOpen={isChatOpen} 
-        toggleChat={toggleChat} 
+        toggleChat={toggleChat}
+        onAiCreateGoal={async (goalData) => {
+          try {
+            const res = await apiClient.post('/goals/', goalData);
+            await fetchAllData();
+            console.log("✅ Goal created:", res.data);
+          } catch (error) {
+            console.error("Failed to create goal:", error);
+          }
+        }}
+        onAiCreateTask={async (taskData) => {
+          try {
+            const res = await apiClient.post('/tasks/', taskData);
+            await fetchAllData();
+            console.log("✅ Task created:", res.data);
+          } catch (error) {
+            console.error("Failed to create task:", error);
+          }
+        }}
         onAiAction={async (command) => {
             if (command === "DELETE_ALL_TASKS") {
                 if(!window.confirm("AI is requesting to delete ALL tasks. Proceed?")) return;
@@ -575,6 +593,55 @@ function App() {
          onClose={() => setIsVoiceOpen(false)} 
          appRef={reactFlowWrapper} 
          onAction={onAiGeneratedMap}
+         onCreateGoal={async (goalData) => {
+          try {
+            const res = await apiClient.post('/goals/', goalData);
+            await fetchAllData();
+          } catch (error) {
+            console.error("Failed to create goal:", error);
+          }
+        }}
+        onCreateTask={async (taskData) => {
+          try {
+            const res = await apiClient.post('/tasks/', taskData);
+            await fetchAllData();
+          } catch (error) {
+            console.error("Failed to create task:", error);
+          }
+        }}
+        onDeleteAction={async (command, targetId) => {
+          if (command === "DELETE_ALL_TASKS") {
+            if (!window.confirm("Delete ALL tasks?")) return;
+            try {
+              for (const t of tasks) await apiClient.delete(`/tasks/${t.id}`);
+              await fetchAllData();
+            } catch(e) { console.error(e); }
+          }
+          if (command === "DELETE_ALL_GOALS") {
+            if (!window.confirm("Delete ALL goals?")) return;
+            for (const g of goals) await apiClient.delete(`/goals/${g.id}`);
+            await fetchAllData();
+          }
+          if (command === "DELETE_SPECIFIC_TASK" && targetId) {
+            try {
+              await apiClient.delete(`/tasks/${targetId}`);
+              await fetchAllData();
+            } catch(e) { console.error(e); }
+          }
+          if (command === "DELETE_SPECIFIC_GOAL" && targetId) {
+            try {
+              await apiClient.delete(`/goals/${targetId}`);
+              await fetchAllData();
+            } catch(e) { console.error(e); }
+          }
+        }}
+        onNavigate={(page) => {
+          if (page === 'dashboard') loadMap(null);
+          else if (page === 'tasks') toggleRightPanel('tasks');
+          else if (page === 'goals') toggleRightPanel('goals');
+          else if (page === 'journal') toggleRightPanel('journal');
+          else if (page === 'maps') setIsLeftSidebarOpen(true);
+        }}
          tasks={tasks}
          goals={goals}
          notes={notes}

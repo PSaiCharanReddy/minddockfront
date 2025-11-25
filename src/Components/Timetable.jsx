@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AiOutlineCheck, AiOutlineDelete, AiOutlineFullscreen, AiOutlinePlus } from 'react-icons/ai';
+import { AiOutlineCheck, AiOutlineDelete, AiOutlineFullscreen, AiOutlinePlus, AiOutlineEdit, AiOutlineClose } from 'react-icons/ai';
 import apiClient from '../api';
 import './Timetable.css';
 
@@ -10,6 +10,12 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
   // State for manual entry
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  
+  // State for editing
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editDueTime, setEditDueTime] = useState("");
 
   // Fetch tasks when sidebar opens or refresh is triggered
   useEffect(() => {
@@ -81,6 +87,56 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
     }
   };
 
+  // --- START EDITING ---
+  const startEditing = (task) => {
+    setEditingId(task.id);
+    setEditTitle(task.title);
+    
+    if (task.due_date) {
+      const date = new Date(task.due_date);
+      const dateStr = date.toISOString().split('T')[0];
+      const timeStr = date.toTimeString().slice(0, 5);
+      setEditDueDate(dateStr);
+      setEditDueTime(timeStr);
+    } else {
+      setEditDueDate("");
+      setEditDueTime("");
+    }
+  };
+
+  // --- SAVE EDITED TASK ---
+  const saveEdit = async (taskId) => {
+    try {
+      // Combine date and time
+      let dueDateTime = null;
+      if (editDueDate) {
+        const timeStr = editDueTime || "09:00";
+        dueDateTime = new Date(`${editDueDate}T${timeStr}`).toISOString();
+      }
+
+      // Delete old and create new (since we don't have a PUT endpoint for updates)
+      await apiClient.delete(`/tasks/${taskId}`);
+      
+      const newTask = await apiClient.post('/tasks/', {
+        title: editTitle,
+        description: "Edited task",
+        due_date: dueDateTime
+      });
+
+      // Update tasks list
+      setTasks(tasks.map(t => t.id === taskId ? newTask.data : t.id !== taskId ? t : newTask.data));
+      setEditingId(null);
+    } catch (error) {
+      console.error("Error saving task", error);
+      alert("Failed to save task");
+    }
+  };
+
+  // --- CANCEL EDITING ---
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
   return (
     <div className={`timetable-sidebar ${isOpen ? 'open' : ''}`}>
       <div className="timetable-header">
@@ -121,24 +177,76 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
           </div>
         ) : (
           tasks.map(task => (
-            <div key={task.id} className={`task-item ${task.is_completed ? 'completed' : ''}`}>
-              <div className="task-left" onClick={() => toggleTask(task)}>
-                <div className={`checkbox ${task.is_completed ? 'checked' : ''}`}>
-                  {task.is_completed && <AiOutlineCheck />}
-                </div>
-                <div className="task-info">
-                   <span className="task-title">{task.title}</span>
-                   {task.due_date && (
-                     <span className="task-time">
-                       {new Date(task.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                     </span>
-                   )}
+            editingId === task.id ? (
+              // EDIT MODE
+              <div key={task.id} className="task-item editing">
+                <div className="edit-form">
+                  <input 
+                    type="text" 
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="edit-title"
+                    placeholder="Task title"
+                  />
+                  
+                  <div className="edit-datetime">
+                    <input 
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className="edit-date"
+                    />
+                    <input 
+                      type="time"
+                      value={editDueTime}
+                      onChange={(e) => setEditDueTime(e.target.value)}
+                      className="edit-time"
+                    />
+                  </div>
+
+                  <div className="edit-actions">
+                    <button onClick={() => saveEdit(task.id)} className="save-btn">
+                      Save
+                    </button>
+                    <button onClick={cancelEdit} className="cancel-btn">
+                      <AiOutlineClose />
+                    </button>
+                  </div>
                 </div>
               </div>
-              <button onClick={() => deleteTask(task.id)} className="delete-task-btn">
-                <AiOutlineDelete />
-              </button>
-            </div>
+            ) : (
+              // VIEW MODE
+              <div key={task.id} className={`task-item ${task.is_completed ? 'completed' : ''}`}>
+                <div className="task-left" onClick={() => toggleTask(task)}>
+                  <div className={`checkbox ${task.is_completed ? 'checked' : ''}`}>
+                    {task.is_completed && <AiOutlineCheck />}
+                  </div>
+                  <div className="task-info">
+                    <span className="task-title">{task.title}</span>
+                    {task.due_date && (
+                      <span className="task-time">
+                        📅 {new Date(task.due_date).toLocaleDateString([], {month: 'short', day: 'numeric'})} 
+                        {' ⏰ '}
+                        {new Date(task.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="task-actions">
+                  <button 
+                    onClick={() => startEditing(task)} 
+                    className="edit-task-btn"
+                    title="Edit time"
+                  >
+                    <AiOutlineEdit />
+                  </button>
+                  <button onClick={() => deleteTask(task.id)} className="delete-task-btn">
+                    <AiOutlineDelete />
+                  </button>
+                </div>
+              </div>
+            )
           ))
         )}
       </div>

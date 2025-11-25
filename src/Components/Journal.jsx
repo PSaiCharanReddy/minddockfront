@@ -39,12 +39,14 @@ export default function Journal({ isOpen, toggleJournal }) {
   };
 
   const deleteNote = async (id) => {
-    // Notes don't have a delete endpoint in our MVP router yet, 
-    // but we can hide it from UI or add the endpoint later.
-    // For now, let's assume we just filter it out locally to simulate.
     if(!window.confirm("Delete this note?")) return;
-    setNotes(notes.filter(n => n.id !== id));
-    // In a real app: await apiClient.delete(`/notes/${id}`);
+    try {
+      await apiClient.delete(`/notes/${id}`);
+      setNotes(notes.filter(n => n.id !== id));
+    } catch (error) {
+      console.error("Failed to delete note", error);
+      alert("Failed to delete the note");
+    }
   };
 
   const generateAiSummary = async () => {
@@ -54,7 +56,7 @@ export default function Journal({ isOpen, toggleJournal }) {
       const noteText = notes.slice(0, 5).map(n => n.content).join("\n---\n");
       const res = await apiClient.post('/ai/chat', {
         messages: [{ from_user: true, text: `Summarize my recent journal entries:\n${noteText}` }],
-        nodes: [], edges: [], tasks: [], goals: [] // Context not needed for this
+        nodes: [], edges: [], tasks: [], goals: [], notes: [] // Context not needed for this
       });
       setAiSummary(res.data.reply);
     } catch (error) {

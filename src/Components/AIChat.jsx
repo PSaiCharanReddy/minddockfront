@@ -76,10 +76,10 @@ function AIChat({
         onAiCreateTask(data.newTask);
       }
 
-      // 4. System Command (DELETE)
-      // This handles "DELETE_ALL_TASKS" or "DELETE_ALL_GOALS"
+      // 4. System Commands (DELETE)
       if (data.action_command && onAiAction) {
-        onAiAction(data.action_command);
+        // For specific deletions, pass both the command and target ID
+        onAiAction(data.action_command, data.target_id);
       }
 
     } catch (error) {

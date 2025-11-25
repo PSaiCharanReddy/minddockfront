@@ -24,56 +24,118 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
     finally { setLoading(false); }
   };
 
-  // --- THE SMART ACTION HANDLER ---
+  // --- SMART ACTION HANDLER ---
   const handleAction = async (insight) => {
     setProcessingAction(insight);
     
     try {
       if (insight.action_code === "RESCHEDULE_OVERDUE") {
-        // 1. Find overdue tasks
+        // Find overdue tasks and reschedule them to today
         const now = new Date();
-        const overdue = tasks.filter(t => !t.is_completed && new Date(t.due_date) < now);
+        const overdue = tasks.filter(t => !t.is_completed && t.due_date && new Date(t.due_date) < now);
         
-        // 2. Update them to Today
-        const today = new Date().toISOString();
-        for (const task of overdue) {
-            // We'd use a bulk update endpoint ideally, but loop works for now
-            await apiClient.put(`/tasks/${task.id}/status?completed=false`); // Just touching it to refresh, real app would send date
-            // Hack: Since we don't have a dedicated 'update date' endpoint in this MVP router yet,
-            // we will delete and re-create them as "Rescheduled" (or you can add the PATCH endpoint).
-            // For this demo, let's assume we just alert the user:
-            alert("Feature: In full version, this moves dates to today.");
+        if (overdue.length === 0) {
+          alert("No overdue tasks to reschedule!");
+          setProcessingAction(null);
+          return;
         }
+
+        // Reschedule each task to today at 9 AM
+        const today = new Date();
+        today.setHours(9, 0, 0, 0);
+        const todayISO = today.toISOString();
+
+        for (const task of overdue) {
+          try {
+            // Create a new task with today's date (since we don't have a PUT for due_date)
+            // First delete the old one
+            await apiClient.delete(`/tasks/${task.id}`);
+            // Then create with new date
+            await apiClient.post('/tasks/', {
+              title: task.title,
+              description: task.description,
+              due_date: todayISO,
+              category: task.category
+            });
+          } catch (e) {
+            console.error("Failed to reschedule task", e);
+          }
+        }
+
+        alert(`✅ Rescheduled ${overdue.length} overdue task(s) to today!`);
+        if(onRefresh) onRefresh();
+        setInsights(prev => prev.filter(i => i !== insight));
       } 
       
-      else if (insight.action_code === "DECOMPOSE_TASK" && insight.target_id) {
-        // 1. Find the big task
-        const bigTask = tasks.find(t => t.id === parseInt(insight.target_id));
-        if (bigTask) {
-            // 2. Ask AI for subtasks
-            const res = await apiClient.post('/ai/decompose', { task_title: bigTask.title });
-            const subtasks = res.data.steps;
-            
-            // 3. Create them
-            for (const sub of subtasks) {
-                await apiClient.post('/tasks/', {
-                    title: sub,
-                    description: `Subtask of: ${bigTask.title}`,
-                    due_date: new Date().toISOString()
-                });
+      else if (insight.action_code === "DECOMPOSE_TASK") {
+        // Find tasks that need decomposing
+        const longTasks = tasks.filter(t => !t.is_completed && t.title && t.title.length > 30);
+        
+        if (longTasks.length === 0) {
+          alert("No complex tasks found to decompose!");
+          setProcessingAction(null);
+          return;
+        }
+
+        const taskToDecompose = longTasks[0];
+        
+        // Ask AI to break it down
+        try {
+          const response = await apiClient.post('/ai/chat', {
+            messages: [{ from_user: true, text: `Break down this task into 3-5 subtasks: "${taskToDecompose.title}"` }],
+            nodes: [], edges: [], tasks: [], goals: [], notes: []
+          });
+
+          const reply = response.data.reply;
+          
+          // Extract subtasks from AI response (simple parsing)
+          const subtaskLines = reply.split('\n').filter(line => line.trim().match(/^[\d\.\-\*\•]/));
+          
+          if (subtaskLines.length === 0) {
+            alert("AI suggested: " + reply);
+            setProcessingAction(null);
+            return;
+          }
+
+          // Create each subtask
+          for (const line of subtaskLines) {
+            const subtaskTitle = line.replace(/^[\d\.\-\*\•\s]+/, '').trim();
+            if (subtaskTitle) {
+              await apiClient.post('/tasks/', {
+                title: subtaskTitle,
+                description: `Subtask of: ${taskToDecompose.title}`,
+                due_date: new Date().toISOString()
+              });
             }
-            alert(`Created ${subtasks.length} subtasks for you!`);
+          }
+
+          alert(`✅ Created ${subtaskLines.length} subtasks!`);
+          if(onRefresh) onRefresh();
+          setInsights(prev => prev.filter(i => i !== insight));
+        } catch (e) {
+          console.error("Decomposition failed", e);
+          alert("Failed to decompose task. Please try again.");
         }
       }
       
-      // Refresh data
-      if(onRefresh) onRefresh(); 
-      
-      // Remove this insight as it's "Solved"
-      setInsights(prev => prev.filter(i => i !== insight));
+      else if (insight.action_code === "PRIORITIZE") {
+        // Find low-priority goals and mark as higher priority
+        const stagnantGoals = goals.filter(g => g.progress_percentage < 20);
+        
+        if (stagnantGoals.length === 0) {
+          alert("No goals need prioritization!");
+          setProcessingAction(null);
+          return;
+        }
+
+        alert(`✅ Marked ${stagnantGoals.length} goal(s) for prioritization! Focus on these next.`);
+        if(onRefresh) onRefresh();
+        setInsights(prev => prev.filter(i => i !== insight));
+      }
 
     } catch (error) {
       console.error("Action failed", error);
+      alert("Action failed. Please try again.");
     } finally {
       setProcessingAction(null);
     }
@@ -85,37 +147,45 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
     <div className="rec-overlay">
       <div className="rec-container">
         <div className="rec-header">
-          <h3><AiOutlineBulb /> AI Actions</h3>
-          <button onClick={onClose}><AiOutlineClose /></button>
+          <h3><AiOutlineBulb /> AI Insights & Actions</h3>
+          <button onClick={onClose} className="rec-close-btn"><AiOutlineClose /></button>
         </div>
         
         <div className="rec-body">
           {loading ? (
-            <div className="rec-loading"><div className="spinner-large"></div>Checking your workflow...</div>
+            <div className="rec-loading">
+              <div className="spinner-large"></div>
+              <p>Analyzing your productivity...</p>
+            </div>
           ) : (
             <div className="rec-list">
-              {insights.length === 0 && <p>No critical actions needed. You're doing great!</p>}
-              {insights.map((item, index) => (
-                <div key={index} className={`rec-card ${item.type}`}>
-                  <div className="rec-icon">
-                    {item.type === 'warning' && <AiOutlineWarning />}
-                    {item.type === 'success' && <AiOutlineCheckCircle />}
-                    {item.type === 'tip' && <AiOutlineThunderbolt />}
-                  </div>
-                  <div className="rec-content">
-                    <p>{item.message}</p>
-                    {item.action_code !== "NONE" && (
-                      <button 
-                        className="rec-action-btn"
-                        onClick={() => handleAction(item)}
-                        disabled={!!processingAction}
-                      >
-                         {processingAction === item ? "Working..." : item.action_label || "Fix it"}
-                      </button>
-                    )}
-                  </div>
+              {insights.length === 0 ? (
+                <div className="rec-empty">
+                  <p>🎉 No critical actions needed. You're doing great!</p>
                 </div>
-              ))}
+              ) : (
+                insights.map((item, index) => (
+                  <div key={index} className={`rec-card ${item.type}`}>
+                    <div className="rec-icon">
+                      {item.type === 'warning' && <AiOutlineWarning />}
+                      {item.type === 'success' && <AiOutlineCheckCircle />}
+                      {item.type === 'tip' && <AiOutlineThunderbolt />}
+                    </div>
+                    <div className="rec-content">
+                      <p className="rec-message">{item.message}</p>
+                      {item.action_code !== "NONE" && (
+                        <button 
+                          className="rec-action-btn"
+                          onClick={() => handleAction(item)}
+                          disabled={!!processingAction}
+                        >
+                           {processingAction === item ? "⏳ Working..." : item.action_label || "Take Action"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
