@@ -122,7 +122,15 @@ function App() {
   const reactFlowWrapper = useRef(null);
   const rfInstance = useReactFlow();
   const { takeSnapshot, undo, redo } = useUndoRedo();
-  const { requestPermission, permission } = useNotifications(tasks);
+  // Navigation callback for notifications
+  const handleNotificationNavigate = useCallback((page) => {
+    if (page === 'tasks') toggleRightPanel('tasks');
+    else if (page === 'goals') toggleRightPanel('goals');
+    else if (page === 'journal') toggleRightPanel('journal');
+    else if (page === 'dashboard') loadMap(null);
+  }, []);
+  
+  const { requestPermission, permission } = useNotifications(tasks, handleNotificationNavigate);
 
   // --- 1. INITIAL DATA FETCH ---
   const fetchAllData = useCallback(async () => {

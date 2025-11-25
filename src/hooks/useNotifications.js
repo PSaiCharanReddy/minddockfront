@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-export const useNotifications = (tasks) => {
+export const useNotifications = (tasks, onNavigate) => {
   const notifiedTaskIds = useRef(new Set());
   const [permission, setPermission] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   );
 
-  // Function to manually request permission (Call this from a button click)
   const requestPermission = () => {
     if (typeof Notification === 'undefined') {
       alert("Notifications not supported on this device");
@@ -23,13 +22,11 @@ export const useNotifications = (tasks) => {
       return;
     }
 
-    // Ask for permission
     Notification.requestPermission().then((perm) => {
       setPermission(perm);
       if (perm === 'granted') {
-        // Show test notification
         new Notification("MindDock Notifications Enabled 🎉", {
-          body: "You'll now receive reminders for upcoming tasks!",
+          body: "You'll now receive reminders for upcoming tasks! Click notification to jump to tasks.",
           icon: '🔔'
         });
       }
@@ -44,7 +41,6 @@ export const useNotifications = (tasks) => {
       const now = new Date();
       
       tasks.forEach(task => {
-        // Skip if already completed, has no due date, or already notified
         if (task.is_completed || !task.due_date || notifiedTaskIds.current.has(task.id)) {
           return;
         }
@@ -52,41 +48,85 @@ export const useNotifications = (tasks) => {
         const dueDate = new Date(task.due_date);
         const timeDiff = dueDate - now;
 
-        // Notify if:
-        // 1. Task is overdue (timeDiff < 0)
-        // 2. OR due within the next 5 minutes (timeDiff < 5 min but > 0)
-        // 3. AND hasn't been notified yet
         const isOverdue = timeDiff < 0;
-        const isDueSoon = timeDiff > 0 && timeDiff < 300000; // 5 minutes = 300000ms
+        const isDueSoon = timeDiff > 0 && timeDiff < 300000; // 5 minutes
 
         if ((isOverdue || isDueSoon) && !notifiedTaskIds.current.has(task.id)) {
-          sendNotification(task, isOverdue);
+          sendNotification(task, isOverdue, onNavigate);
           notifiedTaskIds.current.add(task.id);
+          
+          // SEND EMAIL ALERT
+          sendEmailAlert(task, isOverdue);
         }
       });
     };
 
-    // Check immediately and then every 60 seconds
     checkTasks();
     const interval = setInterval(checkTasks, 60000);
     return () => clearInterval(interval);
-  }, [tasks, permission]);
+  }, [tasks, permission, onNavigate]);
 
-  const sendNotification = (task, isOverdue = false) => {
+  const sendNotification = (task, isOverdue = false, onNavigate) => {
     try {
       const title = isOverdue ? "⚠️ Overdue Task" : "⏰ Task Reminder";
       const body = `${task.title}${isOverdue ? ' (Overdue!)' : ' is due soon'}`;
       
-      new Notification(title, {
+      const notification = new Notification(title, {
         body: body,
         icon: isOverdue ? '⚠️' : '📌',
-        tag: `task-${task.id}`, // Prevents duplicate notifications
-        requireInteraction: isOverdue // Overdue tasks need user interaction to dismiss
+        tag: `task-${task.id}`,
+        requireInteraction: isOverdue,
+        badge: '🔔'
       });
+
+      // CLICK HANDLER - Navigate to tasks page
+      notification.onclick = () => {
+        console.log("🔔 Notification clicked - navigating to tasks");
+        
+        // Bring window to front
+        window.focus();
+        
+        // Navigate to tasks page
+        if (onNavigate) {
+          onNavigate('tasks');
+        }
+        
+        // Close notification
+        notification.close();
+      };
       
       playNotificationSound();
     } catch (e) {
       console.error("Notification failed", e);
+    }
+  };
+
+  const sendEmailAlert = async (task, isOverdue = false) => {
+    try {
+      console.log("📧 Sending email alert for task:", task.title);
+      
+      const response = await fetch('/api/email/send-alert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          task_id: task.id,
+          task_title: task.title,
+          due_date: task.due_date,
+          is_overdue: isOverdue
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Email sent successfully:", data.message);
+      } else {
+        console.log("⚠️ Email service unavailable");
+      }
+    } catch (error) {
+      console.error("📧 Email sending failed:", error);
+      // Don't show error to user - graceful fallback
     }
   };
 
@@ -97,7 +137,6 @@ export const useNotifications = (tasks) => {
       
       const ctx = new AudioContext();
       
-      // Play two beeps for notification
       const playBeep = (frequency, startTime) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -112,8 +151,8 @@ export const useNotifications = (tasks) => {
       };
       
       const now = ctx.currentTime;
-      playBeep(587.33, now);      // First beep (D5 note)
-      playBeep(587.33, now + 0.4); // Second beep with gap
+      playBeep(587.33, now);
+      playBeep(587.33, now + 0.4);
       
     } catch (e) {
       console.error("Audio play failed", e);
