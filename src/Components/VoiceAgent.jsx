@@ -1,24 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { AiOutlineAudio, AiOutlineClose, AiOutlineEye } from 'react-icons/ai';
-import { toPng } from 'html-to-image'; 
+import { AiOutlineAudio, AiOutlineClose } from 'react-icons/ai';
 import apiClient from '../api';
 import './VoiceAgent.css';
 
 export default function VoiceAgent({ 
-  isOpen, 
-  onClose, 
-  appRef, 
-  onAction,
-  onCreateGoal,
-  onCreateTask,
-  onDeleteAction,
-  onNavigate,
-  onCreateMap,  // NEW: callback to create named map
-  tasks, 
-  goals, 
-  notes, 
-  nodes, 
-  edges 
+  isOpen, onClose, onAction, onCreateGoal, onCreateTask, onDeleteAction, onNavigate, onCreateMap,
+  tasks, goals, notes, nodes, edges 
 }) {
   const [status, setStatus] = useState("idle");
   const [transcript, setTranscript] = useState("");
@@ -29,30 +16,18 @@ export default function VoiceAgent({
   useEffect(() => {
     if (isOpen) {
       isContinuous.current = true;
+      setTranscript("");
       startListening();
     } else {
       isContinuous.current = false;
       stopListening();
+      setTranscript("");
     }
     return () => stopListening();
   }, [isOpen]);
 
-  const cleanTextForVoice = (text) => {
-    return text
-      .replace(/⏳/g, '')
-      .replace(/📅/g, '')
-      .replace(/✅/g, '')
-      .replace(/🔥/g, '')
-      .replace(/🎯/g, '')
-      .replace(/🗑️/g, '')
-      .replace(/📝/g, '')
-      .replace(/[\s\s]+/g, ' ')
-      .trim();
-  };
-
   const startListening = () => {
     if (!isContinuous.current) return;
-
     if (!('webkitSpeechRecognition' in window)) {
       alert("Voice not supported. Try Chrome.");
       return;
@@ -64,34 +39,39 @@ export default function VoiceAgent({
     newRecognition.continuous = false;
     newRecognition.interimResults = false;
     newRecognition.lang = 'en-US';
-
     newRecognition.onstart = () => setStatus("listening");
     
     newRecognition.onresult = async (event) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
       
-      if (['stop', 'exit', 'close', 'goodbye'].some(cmd => text.toLowerCase().includes(cmd))) {
+      if (['stop', 'exit', 'close', 'goodbye', 'cancel'].some(cmd => text.toLowerCase().includes(cmd))) {
         speakResponse("Goodbye!");
         isContinuous.current = false;
         setTimeout(onClose, 1500);
         return;
       }
 
-      handleVoiceCommand(text);
+      await handleVoiceCommand(text);
     };
 
     newRecognition.onerror = (event) => {
       if (event.error === 'no-speech' && isContinuous.current) {
-        newRecognition.stop(); 
-      } else {
-        setStatus("idle");
+        setTimeout(() => {
+          if (isContinuous.current) startListening();
+        }, 100);
+      } else if (event.error !== 'aborted' && isContinuous.current) {
+        setTimeout(() => startListening(), 1000);
       }
     };
 
     newRecognition.onend = () => {
-      if (status === "listening" && isContinuous.current) {
-        startListening();
+      if (isContinuous.current) {
+        setTimeout(() => {
+          if (isContinuous.current) startListening();
+        }, 100);
+      } else {
+        setStatus("idle");
       }
     };
 
@@ -109,190 +89,114 @@ export default function VoiceAgent({
   const handleVoiceCommand = async (text) => {
     setStatus("processing");
     const textLower = text.toLowerCase();
-    
-    console.log("🎤 Voice Input:", textLower);
-    
-    // ========================================
-    // DIRECT ACTIONS (No AI needed)
-    // ========================================
 
-    // Delete Task - DIRECT EXECUTION
-    if (textLower.includes("delete task") || textLower.includes("remove task")) {
-      const taskName = textLower
-        .replace("delete task", "").replace("remove task", "")
-        .trim().replace(/[.,!?;:]/g, '');
+    // Check if this is a roadmap/brainstorm command - create NEW map for it
+    if (textLower.includes('roadmap') || textLower.includes('road map') || textLower.includes('brainstorm') || textLower.includes('brain storm')) {
+      const isRoadmap = textLower.includes('roadmap') || textLower.includes('road map');
+      const topic = text
+        .replace(/roadmap/gi, '')
+        .replace(/road map/gi, '')
+        .replace(/brainstorm/gi, '')
+        .replace(/brain storm/gi, '')
+        .replace(/create/gi, '')
+        .replace(/for/gi, '')
+        .replace(/a/gi, '')
+        .trim();
       
-      console.log("🗑️ Direct Delete Task:", taskName);
-      
-      if (taskName) {
-        const matchingTask = tasks.find(t => 
-          t.title.toLowerCase().includes(taskName) || 
-          taskName.includes(t.title.toLowerCase())
-        );
-        
-        if (matchingTask) {
-          speakResponse(`Deleted task ${matchingTask.title}`);
-          if (onDeleteAction) onDeleteAction("DELETE_SPECIFIC_TASK", matchingTask.id);
-          return;
-        } else {
-          speakResponse(`Task ${taskName} not found`);
-          return;
-        }
+      if (!topic || topic.length < 2) {
+        speakResponse("Please specify a topic");
+        return;
       }
-    }
 
-    // Delete Goal - DIRECT EXECUTION
-    if (textLower.includes("delete goal") || textLower.includes("remove goal")) {
-      const goalName = textLower
-        .replace("delete goal", "").replace("remove goal", "")
-        .trim().replace(/[.,!?;:]/g, '');
+      const mapName = `${isRoadmap ? 'Roadmap' : 'Brainstorm'}: ${topic}`;
+      speakResponse(`Creating ${isRoadmap ? 'roadmap' : 'brainstorm'} for ${topic}`);
       
-      console.log("🗑️ Direct Delete Goal:", goalName);
-      
-      if (goalName) {
-        const matchingGoal = goals.find(g => 
-          g.title.toLowerCase().includes(goalName) || 
-          goalName.includes(g.title.toLowerCase())
-        );
-        
-        if (matchingGoal) {
-          speakResponse(`Deleted goal ${matchingGoal.title}`);
-          if (onDeleteAction) onDeleteAction("DELETE_SPECIFIC_GOAL", matchingGoal.id);
-          return;
-        } else {
-          speakResponse(`Goal ${goalName} not found`);
-          return;
-        }
-      }
-    }
-
-    // Clear All Tasks
-    if (textLower.includes("clear all task") || textLower.includes("delete all task")) {
-      console.log("🗑️ Clear All Tasks");
-      speakResponse("Cleared all tasks");
-      if (onDeleteAction) onDeleteAction("DELETE_ALL_TASKS", null);
-      return;
-    }
-
-    // Clear All Goals
-    if (textLower.includes("clear all goal") || textLower.includes("delete all goal")) {
-      console.log("🗑️ Clear All Goals");
-      speakResponse("Cleared all goals");
-      if (onDeleteAction) onDeleteAction("DELETE_ALL_GOALS", null);
-      return;
-    }
-
-    // NEW: Create Named Map
-    if (textLower.includes("create map") || textLower.includes("new map")) {
-      const mapName = textLower
-        .replace("create map", "").replace("new map", "")
-        .trim().replace(/[.,!?;:]/g, '') || "Untitled Map";
-      
-      console.log("🗺️ Creating Named Map:", mapName);
-      speakResponse(`Creating new map: ${mapName}`);
-      
-      if (onCreateMap) {
-        await onCreateMap(mapName);
-      }
-      return;
-    }
-
-    // ========================================
-    // VOICE NAVIGATION COMMANDS
-    // ========================================
-    
-    if (['dashboard', 'home', 'go home', 'main menu', 'homepage'].some(cmd => textLower.includes(cmd))) {
-      speakResponse("Taking you to dashboard");
-      if (onNavigate) onNavigate('dashboard');
-      return;
-    }
-
-    if (['task', 'tasks', 'to do', 'todos', 'timetable', 'schedule', 'show tasks'].some(cmd => textLower.includes(cmd))) {
-      speakResponse("Opening your tasks");
-      if (onNavigate) onNavigate('tasks');
-      return;
-    }
-
-    if (['goal', 'goals', 'target', 'targets', 'show goals'].some(cmd => textLower.includes(cmd))) {
-      speakResponse("Opening your goals");
-      if (onNavigate) onNavigate('goals');
-      return;
-    }
-
-    if (['journal', 'notes', 'diary'].some(cmd => textLower.includes(cmd))) {
-      speakResponse("Opening your journal");
-      if (onNavigate) onNavigate('journal');
-      return;
-    }
-
-    if (['show maps', 'maps view', 'go to maps', 'map list'].some(cmd => textLower.includes(cmd))) {
-      speakResponse("Opening your mind maps");
-      if (onNavigate) onNavigate('maps');
-      return;
-    }
-
-    // ========================================
-    // AI-POWERED COMMANDS (Create, Roadmap, etc)
-    // ========================================
-
-    let imageData = null;
-    if (['screen', 'look', 'see', 'analyze map', 'analyze'].some(w => textLower.includes(w))) {
       try {
-        const viewport = document.querySelector('.react-flow__viewport'); 
-        if (viewport) {
-          const dataUrl = await toPng(viewport, { pixelRatio: 1 }); 
-          imageData = dataUrl.split(',')[1]; 
+        // Create new map
+        const newMapRes = await apiClient.post('/map/', { title: mapName });
+        
+        // Call AI to generate content
+        const cleanNodes = [];
+        const response = await apiClient.post('/ai/chat', {
+          messages: [{ from_user: true, text: isRoadmap ? `roadmap for ${topic}` : `brainstorm ${topic}` }],
+          nodes: cleanNodes,
+          edges: [],
+          tasks: tasks || [],
+          goals: goals || [],
+          notes: notes || [],
+          selectedNodes: [],
+          uploads: []
+        });
+
+        if (response.data.newMapData && response.data.newMapData.nodes && response.data.newMapData.nodes.length > 0) {
+          // Save to the new map
+          await apiClient.put(`/map/${newMapRes.data.id}`, {
+            title: mapName,
+            nodes: response.data.newMapData.nodes,
+            edges: response.data.newMapData.edges || []
+          });
+          
+          // Navigate to the new map
+          if (onCreateMap) {
+            await onCreateMap(mapName);
+          }
+          
+          speakResponse(`${isRoadmap ? 'Roadmap' : 'Brainstorm'} created with ${response.data.newMapData.nodes.length} items!`);
+        } else {
+          speakResponse("Could not generate content. Try again");
         }
-      } catch (e) { console.error("Vision failed", e); }
+      } catch (error) {
+        console.error("Voice command error:", error);
+        speakResponse("Sorry, something went wrong");
+      }
+      return;
     }
 
-    // SEND TO AI WITH FULL CONTEXT
+    // For all other commands, use AI Chat API
     try {
       const cleanNodes = nodes ? nodes.map(({ selected, dragging, ...n }) => n) : [];
-
+      
       const response = await apiClient.post('/ai/chat', {
         messages: [{ from_user: true, text: text }],
-        nodes: cleanNodes, 
-        edges: edges || [], 
-        tasks: tasks || [], 
-        goals: goals || [], 
+        nodes: cleanNodes,
+        edges: edges || [],
+        tasks: tasks || [],
+        goals: goals || [],
         notes: notes || [],
         selectedNodes: [],
-        uploads: imageData ? [{ data: imageData, mime_type: "image/png" }] : []
+        uploads: []
       });
 
-      const reply = response.data.reply;
-      const cleanReply = cleanTextForVoice(reply);
+      const data = response.data;
       
-      speakResponse(cleanReply);
-
-      // 1. Map Generation
-      if (response.data.newMapData && response.data.newMapData.nodes && response.data.newMapData.nodes.length > 0) {
-        console.log("📍 Creating AI map with", response.data.newMapData.nodes.length, "nodes");
-        onAction(response.data.newMapData);
-        setTimeout(() => {
-          if (onNavigate) onNavigate('maps');
-        }, 500);
+      // Speak AI response
+      if (data.reply) {
+        speakResponse(data.reply);
       }
 
-      // 2. Goal Creation
-      if (response.data.newGoal && onCreateGoal) {
-        onCreateGoal(response.data.newGoal);
+      // Handle map generation (for current map)
+      if (data.newMapData && data.newMapData.nodes && data.newMapData.nodes.length > 0) {
+        onAction(data.newMapData);
       }
 
-      // 3. Task Creation
-      if (response.data.newTask && onCreateTask) {
-        onCreateTask(response.data.newTask);
+      // Handle goal creation
+      if (data.newGoal && onCreateGoal) {
+        await onCreateGoal(data.newGoal);
       }
 
-      // 4. Delete Actions (from AI)
-      if (response.data.action_command && onDeleteAction) {
-        onDeleteAction(response.data.action_command, response.data.target_id);
+      // Handle task creation
+      if (data.newTask && onCreateTask) {
+        await onCreateTask(data.newTask);
+      }
+
+      // Handle commands
+      if (data.action_command && onDeleteAction) {
+        onDeleteAction(data.action_command, data.target_id);
       }
 
     } catch (error) {
-      console.error("Voice AI Error", error);
-      speakResponse("I'm sorry, I encountered an error.");
+      console.error("Voice command error:", error);
+      speakResponse("Sorry, something went wrong. Please try again.");
     }
   };
 
@@ -328,25 +232,28 @@ export default function VoiceAgent({
       
       <div className="voice-feedback">
         <p className="voice-status">
-          {status === "listening" ? "🎤 Listening..." : 
+          {status === "listening" ? "🎤 LISTENING..." : 
            status === "processing" ? "🤔 Processing..." : 
            status === "speaking" ? "🔊 Speaking..." : "Ready"}
         </p>
         {transcript && <p className="voice-transcript">"{transcript}"</p>}
         
         <div className="voice-commands">
-          <p className="commands-title">💡 Voice Commands:</p>
-          <ul>
-            <li>🗺️ "Create map: [name]" - Creates new map with name</li>
-            <li>🛣️ "Create roadmap for [topic]" - AI roadmap</li>
-            <li>🧠 "Brainstorm [topic]" - AI brainstorm</li>
-            <li>✅ "Create task: [what]" - Add task</li>
-            <li>🎯 "Create goal: [goal]" - Add goal</li>
-            <li>🗑️ "Delete task: [name]" - Delete task</li>
-            <li>🗑️ "Delete goal: [name]" - Delete goal</li>
-            <li>📊 "Show tasks", "Show goals", "Open journal"</li>
-            <li>❌ "Stop" - Exit voice</li>
-          </ul>
+          <p className="commands-title">💡 Just speak naturally!</p>
+          <div className="command-categories">
+            <div className="command-group">
+              <strong>Examples:</strong>
+              <ul>
+                <li>"create roadmap for Python"</li>
+                <li>"brainstorm app ideas"</li>
+                <li>"create goal to learn React"</li>
+                <li>"create task buy groceries"</li>
+                <li>"list all tasks"</li>
+                <li>"open tasks"</li>
+              </ul>
+            </div>
+          </div>
+          <p className="tip-text">ℹ️ Say "stop" to exit</p>
         </div>
       </div>
 

@@ -36,13 +36,15 @@
 
 .voice-feedback {
   margin-top: 15px;
-  background: rgba(0, 0, 0, 0.8);
-  padding: 10px 20px;
-  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 15px 25px;
+  border-radius: 16px;
   text-align: center;
   border: 1px solid #444;
   pointer-events: auto;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(10px);
+  max-width: 600px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .voice-status {
@@ -90,3 +92,83 @@
 @keyframes wave { from { height: 4px; } to { height: 50px; } }
 
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* COMMAND CATEGORIES */
+.voice-commands {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #444;
+}
+
+.commands-title {
+  margin: 0 0 10px 0;
+  color: #007aff;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.command-categories {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  text-align: left;
+}
+
+.command-group {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.command-group strong {
+  color: #007aff;
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.85rem;
+}
+
+.command-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.command-group li {
+  color: #bbb;
+  font-size: 0.75rem;
+  margin: 3px 0;
+  padding-left: 15px;
+  position: relative;
+}
+
+.command-group li:before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #007aff;
+}
+
+.conversation-prompt {
+  margin: 10px 0 0 0;
+  padding: 8px 12px;
+  background: rgba(0, 122, 255, 0.2);
+  border: 1px solid rgba(0, 122, 255, 0.4);
+  border-radius: 8px;
+  color: #007aff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  animation: pulse-prompt 1.5s infinite;
+}
+
+@keyframes pulse-prompt {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+.tip-text {
+  margin: 10px 0 0 0;
+  color: #888;
+  font-size: 0.75rem;
+  font-style: italic;
+}

@@ -69,3 +69,19 @@
   border: none; color: #ff453a; cursor: pointer; opacity: 0; transition: opacity 0.2s;
 }
 .note-card:hover .delete-note-btn { opacity: 1; }
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.empty-state p {
+  margin: 10px 0;
+  font-size: 1rem;
+}
+
+.empty-hint {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}

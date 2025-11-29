@@ -1,10 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import AppWrapper from './App' // <-- Import the new AppWrapper
-import './index.css' // You can delete index.css if you want
+import AuthWrapper from './AuthWrapper' // Use AuthWrapper instead of AppWrapper
+import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AppWrapper /> {/* <-- Render AppWrapper */}
+    <AuthWrapper />
   </React.StrictMode>,
 )

@@ -8,8 +8,9 @@ export default function CommandPalette({
   nodes, 
   tasks, 
   goals, 
-  notes, // Assuming we pass notes in App.jsx
-  onNavigate 
+  notes,
+  maps, // Add maps to search across
+  onNavigate // This should handle navigation to different pages
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -29,8 +30,11 @@ export default function CommandPalette({
     }
     const lowerQuery = query.toLowerCase();
     
-    const filteredNodes = nodes.map(n => ({ ...n, type: 'node' }))
-      .filter(n => n.data.label.toLowerCase().includes(lowerQuery));
+    // Search nodes with map information
+    const filteredNodes = nodes.map(n => ({ 
+      ...n, 
+      type: 'node'
+    })).filter(n => n.data.label.toLowerCase().includes(lowerQuery));
       
     const filteredTasks = tasks.map(t => ({ ...t, type: 'task' }))
       .filter(t => t.title.toLowerCase().includes(lowerQuery));
@@ -38,9 +42,8 @@ export default function CommandPalette({
     const filteredGoals = goals.map(g => ({ ...g, type: 'goal' }))
       .filter(g => g.title.toLowerCase().includes(lowerQuery));
 
-    // Assuming notes are passed or available
     const filteredNotes = (notes || []).map(n => ({...n, type: 'note'}))
-       .filter(n => n.content.toLowerCase().includes(lowerQuery));
+       .filter(n => (n.content || '').toLowerCase().includes(lowerQuery));
 
     setResults([...filteredNodes, ...filteredTasks, ...filteredGoals, ...filteredNotes]);
     setSelectedIndex(0);
@@ -48,19 +51,24 @@ export default function CommandPalette({
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
-      setSelectedIndex(prev => (prev + 1) % results.length);
+      e.preventDefault();
+      setSelectedIndex(prev => (prev + 1) % Math.max(1, results.length));
     } else if (e.key === 'ArrowUp') {
-      setSelectedIndex(prev => (prev - 1 + results.length) % results.length);
+      e.preventDefault();
+      setSelectedIndex(prev => (prev - 1 + results.length) % Math.max(1, results.length));
     } else if (e.key === 'Enter') {
+      e.preventDefault();
       if (results[selectedIndex]) {
         handleSelect(results[selectedIndex]);
       }
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       onClose();
     }
   };
 
   const handleSelect = (item) => {
+    console.log('🔍 Selected item:', item);
     onNavigate(item);
     onClose();
     setQuery("");
@@ -76,7 +84,7 @@ export default function CommandPalette({
           <input 
             ref={inputRef}
             type="text" 
-            placeholder="Type to search..." 
+            placeholder="Search nodes, tasks, goals, notes..." 
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -85,8 +93,24 @@ export default function CommandPalette({
         </div>
         
         <div className="palette-results">
+          {results.length === 0 && !query && (
+            <div className="search-hint">
+              <p>🔍 <strong>Quick Search</strong></p>
+              <p>Search across all your content:</p>
+              <ul>
+                <li>📍 <strong>Nodes</strong> - Find and zoom to map nodes</li>
+                <li>✅ <strong>Tasks</strong> - Jump to task panel</li>
+                <li>🎯 <strong>Goals</strong> - Open goal details</li>
+                <li>📝 <strong>Notes</strong> - View journal entries</li>
+              </ul>
+              <p className="tip">💡 Type to start searching...</p>
+            </div>
+          )}
           {results.length === 0 && query && (
-            <div className="no-results">No results found.</div>
+            <div className="no-results">
+              <p>No results found for "{query}"</p>
+              <p className="tip">Try searching for task names, goal titles, or node labels</p>
+            </div>
           )}
           {results.map((item, index) => (
             <div 
@@ -102,13 +126,24 @@ export default function CommandPalette({
                 {item.type === 'note' && <AiOutlineBook />}
               </div>
               <div className="result-info">
-                <span className="result-title">
-                  {item.type === 'node' ? item.data.label : (item.title || item.content.substring(0, 30) + '...')}
-                </span>
+                <div className="result-title-group">
+                  <span className="result-title">
+                    {item.type === 'node' ? item.data.label : (item.title || (item.content ? item.content.substring(0, 40) + '...' : 'Untitled'))}
+                  </span>
+                  {item.type === 'node' && item.mapTitle && (
+                    <span className="result-map-badge">{item.mapTitle}</span>
+                  )}
+                </div>
                 <span className="result-type">{item.type.toUpperCase()}</span>
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="palette-footer">
+          <span className="shortcut">↑↓ Navigate</span>
+          <span className="shortcut">↵ Select</span>
+          <span className="shortcut">ESC Close</span>
         </div>
       </div>
     </div>

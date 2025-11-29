@@ -91,6 +91,7 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [goals, setGoals] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [allNodesFromAllMaps, setAllNodesFromAllMaps] = useState([]); // NEW: For global search
 
   // --- STATE: UI Toggles ---
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false); // Maps List
@@ -146,6 +147,26 @@ function App() {
       setTasks(taskRes.data);
       setGoals(goalRes.data);
       setNotes(noteRes.data);
+      
+      // Fetch ALL nodes from ALL maps for global search
+      const allNodes = [];
+      for (const map of mapRes.data) {
+        try {
+          const mapData = await apiClient.get(`/map/${map.id}`);
+          if (mapData.data.nodes) {
+            mapData.data.nodes.forEach(node => {
+              allNodes.push({
+                ...node,
+                mapId: map.id,
+                mapTitle: map.title
+              });
+            });
+          }
+        } catch (err) {
+          console.error(`Failed to fetch map ${map.id}:`, err);
+        }
+      }
+      setAllNodesFromAllMaps(allNodes);
     } catch (error) {
       console.error("Init failed:", error);
     } finally {
@@ -278,13 +299,31 @@ function App() {
     }, 500);
   };
 
-  const handleNavigate = (item) => {
+  const handleNavigate = async (item) => {
+    console.log('🔍 Navigating to:', item);
+    
     if (item.type === 'node') {
-      rfInstance.fitView({ nodes: [{ id: item.id }], duration: 800, padding: 2 });
-      setNodes(nds => nds.map(n => ({...n, selected: n.id === item.id})));
-    } else if (item.type === 'task') toggleRightPanel('tasks'); 
-    else if (item.type === 'goal') toggleRightPanel('goals'); 
-    else if (item.type === 'note') toggleRightPanel('journal');
+      // Node has mapId and mapTitle from allNodesFromAllMaps
+      if (item.mapId && item.mapId !== currentMapId) {
+        // Load the correct map
+        await loadMap(item.mapId);
+        // Wait for map to load, then zoom to node
+        setTimeout(() => {
+          rfInstance.fitView({ nodes: [{ id: item.id }], duration: 800, padding: 2 });
+          setNodes(nds => nds.map(n => ({...n, selected: n.id === item.id})));
+        }, 500);
+      } else {
+        // Node is in current map or no mapId, just zoom
+        rfInstance.fitView({ nodes: [{ id: item.id }], duration: 800, padding: 2 });
+        setNodes(nds => nds.map(n => ({...n, selected: n.id === item.id})));
+      }
+    } else if (item.type === 'task') {
+      toggleRightPanel('tasks');
+    } else if (item.type === 'goal') {
+      toggleRightPanel('goals');
+    } else if (item.type === 'note') {
+      toggleRightPanel('journal');
+    }
   };
 
   const saveNodeDetails = (id, details) => {
@@ -582,7 +621,7 @@ function App() {
       {isTimetableFullOpen && <TimetableFull isOpen={isTimetableFullOpen} onClose={() => setIsTimetableFullOpen(false)} />}
       
       <NodeDetails node={selectedNodeForDetails} isOpen={!!selectedNodeForDetails} onClose={() => setSelectedNodeForDetails(null)} onSave={saveNodeDetails} />
-      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} nodes={nodes} tasks={tasks} goals={goals} notes={notes} onNavigate={handleNavigate} />
+      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} nodes={allNodesFromAllMaps} tasks={tasks} goals={goals} notes={notes} maps={maps} onNavigate={handleNavigate} />
       
       <Recommendations 
         isOpen={isRecOpen} 
@@ -649,13 +688,8 @@ function App() {
           else if (page === 'maps') setIsLeftSidebarOpen(true);
         }}
         onCreateMap={async (mapName) => {
-          try {
-            const res = await apiClient.post('/map/', { title: mapName });
-            await loadMap(res.data.id);
-            setIsLeftSidebarOpen(false);
-          } catch(e) { 
-            console.error("Failed to create map:", e); 
-          }
+          // Map already created by VoiceAgent, just refresh and load it
+          await fetchAllData();
         }}
          tasks={tasks}
          goals={goals}

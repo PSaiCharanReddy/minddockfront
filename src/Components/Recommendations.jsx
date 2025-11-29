@@ -10,18 +10,116 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
 
   useEffect(() => {
     if (isOpen) generateInsights();
-  }, [isOpen]);
+  }, [isOpen, tasks, goals, notes]);
 
   const generateInsights = async () => {
     setLoading(true);
+    setInsights([]);
+    
     try {
-      const response = await apiClient.post('/ai/chat', {
-        messages: [{ from_user: true, text: "Analyze my progress" }],
-        nodes: [], edges: [], tasks: tasks, goals: goals, notes: notes
+      // Generate smart insights based on actual user data
+      const smartInsights = [];
+      
+      // Check for overdue tasks
+      const now = new Date();
+      const overdue = tasks.filter(t => !t.is_completed && t.due_date && new Date(t.due_date) < now);
+      if (overdue.length > 0) {
+        smartInsights.push({
+          type: 'warning',
+          message: `You have ${overdue.length} overdue task(s). Reschedule them to get back on track!`,
+          action_code: 'RESCHEDULE_OVERDUE',
+          action_label: 'Reschedule to Today'
+        });
+      }
+      
+      // Check for complex tasks that need decomposition
+      const complexTasks = tasks.filter(t => 
+        !t.is_completed && 
+        t.title && 
+        (t.title.length > 30 || t.title.toLowerCase().includes('project') || t.title.toLowerCase().includes('plan'))
+      );
+      if (complexTasks.length > 0) {
+        smartInsights.push({
+          type: 'tip',
+          message: `Found ${complexTasks.length} complex task(s). Breaking them into subtasks can boost productivity!`,
+          action_code: 'DECOMPOSE_TASK',
+          action_label: 'Create Subtasks'
+        });
+      }
+      
+      // Check for stagnant goals
+      const stagnantGoals = goals.filter(g => g.progress_percentage < 20);
+      if (stagnantGoals.length > 0) {
+        smartInsights.push({
+          type: 'warning',
+          message: `${stagnantGoals.length} goal(s) need attention. Time to focus and make progress!`,
+          action_code: 'PRIORITIZE',
+          action_label: 'Mark as Priority'
+        });
+      }
+      
+      // Check for task completion rate
+      const completedTasks = tasks.filter(t => t.is_completed).length;
+      const totalTasks = tasks.length;
+      if (totalTasks > 0) {
+        const completionRate = (completedTasks / totalTasks) * 100;
+        if (completionRate > 70) {
+          smartInsights.push({
+            type: 'success',
+            message: `Amazing! You've completed ${completionRate.toFixed(0)}% of your tasks. Keep up the great work! 🎉`,
+            action_code: 'NONE',
+            action_label: null
+          });
+        }
+      }
+      
+      // Check if user has too many pending tasks
+      const pendingTasks = tasks.filter(t => !t.is_completed);
+      if (pendingTasks.length > 10) {
+        smartInsights.push({
+          type: 'tip',
+          message: `You have ${pendingTasks.length} pending tasks. Consider archiving completed ones or delegating some work.`,
+          action_code: 'REMOVE_DISTRACTION',
+          action_label: 'Clean Up Tasks'
+        });
+      }
+      
+      // Check for goals without tasks
+      const goalsWithoutTasks = goals.filter(goal => {
+        const goalTasks = tasks.filter(t => t.goal_id === goal.id);
+        return goalTasks.length === 0;
       });
-      if (response.data.insights) setInsights(response.data.insights);
-    } catch (error) { console.error(error); } 
-    finally { setLoading(false); }
+      if (goalsWithoutTasks.length > 0) {
+        smartInsights.push({
+          type: 'tip',
+          message: `${goalsWithoutTasks.length} goal(s) have no tasks linked. Create action items to start making progress!`,
+          action_code: 'NONE',
+          action_label: null
+        });
+      }
+      
+      // If no issues found
+      if (smartInsights.length === 0) {
+        smartInsights.push({
+          type: 'success',
+          message: '🎉 Everything looks great! You\'re staying on top of your tasks and goals. Keep it up!',
+          action_code: 'NONE',
+          action_label: null
+        });
+      }
+      
+      setInsights(smartInsights);
+    } catch (error) {
+      console.error("Failed to generate insights:", error);
+      setInsights([{
+        type: 'warning',
+        message: 'Failed to generate insights. Please try again.',
+        action_code: 'NONE',
+        action_label: null
+      }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // --- SMART ACTION HANDLER ---
@@ -30,7 +128,6 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
     
     try {
       if (insight.action_code === "RESCHEDULE_OVERDUE") {
-        // Find overdue tasks and reschedule them to today
         const now = new Date();
         const overdue = tasks.filter(t => !t.is_completed && t.due_date && new Date(t.due_date) < now);
         
@@ -40,21 +137,16 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
           return;
         }
 
-        // Reschedule each task to today at 9 AM
         const today = new Date();
         today.setHours(9, 0, 0, 0);
-        const todayISO = today.toISOString();
 
         for (const task of overdue) {
           try {
-            // Create a new task with today's date (since we don't have a PUT for due_date)
-            // First delete the old one
             await apiClient.delete(`/tasks/${task.id}`);
-            // Then create with new date
             await apiClient.post('/tasks/', {
               title: task.title,
               description: task.description,
-              due_date: todayISO,
+              due_date: today.toISOString(),
               category: task.category
             });
           } catch (e) {
@@ -68,27 +160,30 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
       } 
       
       else if (insight.action_code === "DECOMPOSE_TASK") {
-        // Find tasks that need decomposing
-        const longTasks = tasks.filter(t => !t.is_completed && t.title && t.title.length > 30);
+        const complexTasks = tasks.filter(t => 
+          !t.is_completed && 
+          t.title && 
+          (t.title.length > 30 || t.title.toLowerCase().includes('project') || t.title.toLowerCase().includes('plan'))
+        );
         
-        if (longTasks.length === 0) {
+        if (complexTasks.length === 0) {
           alert("No complex tasks found to decompose!");
           setProcessingAction(null);
           return;
         }
 
-        const taskToDecompose = longTasks[0];
+        const taskToDecompose = complexTasks[0];
         
-        // Ask AI to break it down
         try {
           const response = await apiClient.post('/ai/chat', {
-            messages: [{ from_user: true, text: `Break down this task into 3-5 subtasks: "${taskToDecompose.title}"` }],
+            messages: [{ 
+              from_user: true, 
+              text: `Break down this task into 3-5 actionable subtasks: "${taskToDecompose.title}"\n\nProvide a numbered list with clear, specific subtasks.` 
+            }],
             nodes: [], edges: [], tasks: [], goals: [], notes: []
           });
 
           const reply = response.data.reply;
-          
-          // Extract subtasks from AI response (simple parsing)
           const subtaskLines = reply.split('\n').filter(line => line.trim().match(/^[\d\.\-\*\•]/));
           
           if (subtaskLines.length === 0) {
@@ -97,14 +192,14 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
             return;
           }
 
-          // Create each subtask
           for (const line of subtaskLines) {
             const subtaskTitle = line.replace(/^[\d\.\-\*\•\s]+/, '').trim();
             if (subtaskTitle) {
               await apiClient.post('/tasks/', {
                 title: subtaskTitle,
                 description: `Subtask of: ${taskToDecompose.title}`,
-                due_date: new Date().toISOString()
+                due_date: new Date().toISOString(),
+                goal_id: taskToDecompose.goal_id
               });
             }
           }
@@ -119,7 +214,6 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
       }
       
       else if (insight.action_code === "PRIORITIZE") {
-        // Find low-priority goals and mark as higher priority
         const stagnantGoals = goals.filter(g => g.progress_percentage < 20);
         
         if (stagnantGoals.length === 0) {
@@ -129,6 +223,33 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
         }
 
         alert(`✅ Marked ${stagnantGoals.length} goal(s) for prioritization! Focus on these next.`);
+        if(onRefresh) onRefresh();
+        setInsights(prev => prev.filter(i => i !== insight));
+      }
+      
+      else if (insight.action_code === "REMOVE_DISTRACTION") {
+        const completedTasks = tasks.filter(t => t.is_completed);
+        
+        if (completedTasks.length === 0) {
+          alert("No completed tasks to clean up!");
+          setProcessingAction(null);
+          return;
+        }
+
+        if (!window.confirm(`Delete ${completedTasks.length} completed tasks?`)) {
+          setProcessingAction(null);
+          return;
+        }
+
+        for (const task of completedTasks) {
+          try {
+            await apiClient.delete(`/tasks/${task.id}`);
+          } catch (e) {
+            console.error("Failed to delete task", e);
+          }
+        }
+
+        alert(`✅ Cleaned up ${completedTasks.length} completed tasks!`);
         if(onRefresh) onRefresh();
         setInsights(prev => prev.filter(i => i !== insight));
       }
@@ -159,33 +280,27 @@ export default function Recommendations({ isOpen, onClose, tasks, goals, notes, 
             </div>
           ) : (
             <div className="rec-list">
-              {insights.length === 0 ? (
-                <div className="rec-empty">
-                  <p>🎉 No critical actions needed. You're doing great!</p>
-                </div>
-              ) : (
-                insights.map((item, index) => (
-                  <div key={index} className={`rec-card ${item.type}`}>
-                    <div className="rec-icon">
-                      {item.type === 'warning' && <AiOutlineWarning />}
-                      {item.type === 'success' && <AiOutlineCheckCircle />}
-                      {item.type === 'tip' && <AiOutlineThunderbolt />}
-                    </div>
-                    <div className="rec-content">
-                      <p className="rec-message">{item.message}</p>
-                      {item.action_code !== "NONE" && (
-                        <button 
-                          className="rec-action-btn"
-                          onClick={() => handleAction(item)}
-                          disabled={!!processingAction}
-                        >
-                           {processingAction === item ? "⏳ Working..." : item.action_label || "Take Action"}
-                        </button>
-                      )}
-                    </div>
+              {insights.map((item, index) => (
+                <div key={index} className={`rec-card ${item.type}`}>
+                  <div className="rec-icon">
+                    {item.type === 'warning' && <AiOutlineWarning />}
+                    {item.type === 'success' && <AiOutlineCheckCircle />}
+                    {item.type === 'tip' && <AiOutlineThunderbolt />}
                   </div>
-                ))
-              )}
+                  <div className="rec-content">
+                    <p className="rec-message">{item.message}</p>
+                    {item.action_code !== "NONE" && item.action_label && (
+                      <button 
+                        className="rec-action-btn"
+                        onClick={() => handleAction(item)}
+                        disabled={!!processingAction}
+                      >
+                         {processingAction === item ? "⏳ Working..." : item.action_label}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
