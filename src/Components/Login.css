@@ -217,7 +217,12 @@
   border-radius: 10px;
   font-size: 15px;
   transition: all 0.3s ease;
-  background: #fafafa;
+  background: white;
+  color: #333;
+}
+
+.form-group input::placeholder {
+  color: #999;
 }
 
 .form-group input:focus {
