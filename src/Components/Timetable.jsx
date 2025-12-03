@@ -3,43 +3,32 @@ import { AiOutlineCheck, AiOutlineDelete, AiOutlineFullscreen, AiOutlinePlus, Ai
 import apiClient from '../api';
 import './Timetable.css';
 
-export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onOpenFull }) {
+export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onOpenFull, tasks: propTasks }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   // State for manual entry
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  
+
   // State for editing
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [editDueTime, setEditDueTime] = useState("");
 
-  // Fetch tasks when sidebar opens or refresh is triggered
+  // Sync with props
   useEffect(() => {
-    if (isOpen) fetchTasks();
-  }, [isOpen, refreshTrigger]);
-
-  const fetchTasks = async () => {
-    setLoading(true);
-    try {
-      const response = await apiClient.get('/tasks/');
-      // Sort: Incomplete first, then by Due Date
-      const sortedTasks = response.data.sort((a, b) => {
+    if (propTasks) {
+      const sortedTasks = [...propTasks].sort((a, b) => {
         if (a.is_completed === b.is_completed) {
           return new Date(a.due_date) - new Date(b.due_date);
         }
         return a.is_completed ? 1 : -1;
       });
       setTasks(sortedTasks);
-    } catch (error) {
-      console.error("Failed to load tasks", error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [propTasks]);
 
   // --- MANUAL ADD TASK ---
   const handleAddTask = async (e) => {
@@ -54,8 +43,8 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
         due_date: new Date().toISOString()
       });
       // Add to top of list immediately
-      setTasks([response.data, ...tasks]); 
-      setNewTaskTitle(""); 
+      setTasks([response.data, ...tasks]);
+      setNewTaskTitle("");
     } catch (error) {
       console.error("Failed to add task", error);
     } finally {
@@ -78,7 +67,7 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
 
   // --- DELETE TASK ---
   const deleteTask = async (id) => {
-    if(!window.confirm("Delete this task?")) return;
+    if (!window.confirm("Delete this task?")) return;
     try {
       await apiClient.delete(`/tasks/${id}`);
       setTasks(tasks.filter(t => t.id !== id));
@@ -91,7 +80,7 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
   const startEditing = (task) => {
     setEditingId(task.id);
     setEditTitle(task.title);
-    
+
     if (task.due_date) {
       const date = new Date(task.due_date);
       const dateStr = date.toISOString().split('T')[0];
@@ -116,7 +105,7 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
 
       // Delete old and create new (since we don't have a PUT endpoint for updates)
       await apiClient.delete(`/tasks/${taskId}`);
-      
+
       const newTask = await apiClient.post('/tasks/', {
         title: editTitle,
         description: "Edited task",
@@ -146,7 +135,7 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
           <button onClick={onOpenFull} className="icon-btn" title="Open Full View">
             <AiOutlineFullscreen />
           </button>
-          
+
           {/* Close Button */}
           <button onClick={toggleTimetable} className="close-btn">×</button>
         </div>
@@ -154,9 +143,9 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
 
       {/* --- MANUAL INPUT SECTION --- */}
       <form onSubmit={handleAddTask} className="timetable-input-area">
-        <input 
-          type="text" 
-          placeholder="Add a quick task..." 
+        <input
+          type="text"
+          placeholder="Add a quick task..."
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
           disabled={isAdding}
@@ -169,7 +158,7 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
       {/* --- TASK LIST --- */}
       <div className="task-list">
         {loading && tasks.length === 0 ? (
-          <div style={{padding: 20, textAlign: 'center', color: '#666'}}>Loading tasks...</div>
+          <div style={{ padding: 20, textAlign: 'center', color: '#666' }}>Loading tasks...</div>
         ) : tasks.length === 0 ? (
           <div className="empty-state">
             <p>No tasks for today.</p>
@@ -181,22 +170,22 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
               // EDIT MODE
               <div key={task.id} className="task-item editing">
                 <div className="edit-form">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="edit-title"
                     placeholder="Task title"
                   />
-                  
+
                   <div className="edit-datetime">
-                    <input 
+                    <input
                       type="date"
                       value={editDueDate}
                       onChange={(e) => setEditDueDate(e.target.value)}
                       className="edit-date"
                     />
-                    <input 
+                    <input
                       type="time"
                       value={editDueTime}
                       onChange={(e) => setEditDueTime(e.target.value)}
@@ -225,17 +214,17 @@ export default function Timetable({ isOpen, toggleTimetable, refreshTrigger, onO
                     <span className="task-title">{task.title}</span>
                     {task.due_date && (
                       <span className="task-time">
-                        📅 {new Date(task.due_date).toLocaleDateString([], {month: 'short', day: 'numeric'})} 
+                        📅 {new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                         {' ⏰ '}
-                        {new Date(task.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        {new Date(task.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     )}
                   </div>
                 </div>
-                
+
                 <div className="task-actions">
-                  <button 
-                    onClick={() => startEditing(task)} 
+                  <button
+                    onClick={() => startEditing(task)}
                     className="edit-task-btn"
                     title="Edit time"
                   >

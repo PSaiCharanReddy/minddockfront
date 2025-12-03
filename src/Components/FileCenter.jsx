@@ -1,104 +1,94 @@
-// FileCenter.jsx
-import React, { useState, useEffect, useRef } from "react";
-
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { AiOutlineCloudUpload, AiOutlineFileText, AiOutlineRobot, AiOutlineClose, AiOutlineDelete, AiOutlineSend } from 'react-icons/ai';
+import { AiOutlineCloudUpload, AiOutlineFileText, AiOutlineClose, AiOutlineDelete, AiOutlineFile, AiOutlineAlignLeft, AiOutlineSearch } from 'react-icons/ai';
 import apiClient from '../api';
 import './FileCenter.css';
 
-export default function FileCenter({ isOpen, onClose, onAiGeneratedMap }) {
-  const [files, setFiles] = useState([]); // Array of files
-  const [input, setInput] = useState("");
-  const [chatHistory, setChatHistory] = useState([
-    { from: 'ai', text: 'Upload files here and ask me anything about them!' }
-  ]);
-  const [loading, setLoading] = useState(false);
-  const chatEndRef = useRef(null);
+export default function FileCenter({ isOpen, onClose }) {
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [context, setContext] = useState('');
 
-  // Scroll to bottom of chat
+  // Text Snippet State
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'text'
+  const [textTitle, setTextTitle] = useState('');
+  const [textContent, setTextContent] = useState('');
+  const [textContext, setTextContext] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Fetch files on mount
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
-
-  // --- 1. PASTE HANDLER (Global Window) ---
-  useEffect(() => {
-    const handlePaste = (e) => {
-      if (!isOpen) return;
-      const items = e.clipboardData.items;
-      const newFiles = [];
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === 'file') {
-          newFiles.push(items[i].getAsFile());
-        }
-      }
-      
-      if (newFiles.length > 0) {
-        setFiles(prev => [...prev, ...newFiles]);
-      }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
+    if (isOpen) {
+      fetchFiles();
+    }
   }, [isOpen]);
 
-  // --- 2. DROP HANDLER ---
-  const onDrop = (acceptedFiles) => {
-    setFiles(prev => [...prev, ...acceptedFiles]);
+  const fetchFiles = async () => {
+    try {
+      const res = await apiClient.get('/files/');
+      setFiles(res.data);
+    } catch (err) {
+      console.error("Failed to fetch files", err);
+    }
+  };
+
+  const onDrop = useCallback(async (acceptedFiles) => {
+    setUploading(true);
+    for (const file of acceptedFiles) {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (context) formData.append('context', context);
+
+      try {
+        await apiClient.post('/files/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } catch (err) {
+        console.error("Upload failed", err);
+      }
+    }
+    setUploading(false);
+    setContext('');
+    fetchFiles();
+  }, [context]);
+
+  const handleTextSubmit = async () => {
+    if (!textContent.trim()) return;
+    setUploading(true);
+    try {
+      await apiClient.post('/files/text', {
+        title: textTitle,
+        content: textContent,
+        context: textContext
+      });
+      setTextTitle('');
+      setTextContent('');
+      setTextContext('');
+      fetchFiles();
+      setActiveTab('upload'); // Switch back to list/upload view
+    } catch (err) {
+      console.error("Text upload failed", err);
+    }
+    setUploading(false);
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
-  // --- 3. REMOVE FILE ---
-  const removeFile = (index) => {
-    setFiles(files.filter((_, i) => i !== index));
-  };
-
-  // --- 4. SEND MESSAGE ---
-  const handleSend = async () => {
-    if (!input.trim() && files.length === 0) return;
-    
-    const userMsg = { from: 'user', text: input || "Analyze these files." };
-    setChatHistory(prev => [...prev, userMsg]);
-    setLoading(true);
-    setInput("");
-
+  const handleDelete = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this item?")) return;
     try {
-      // Convert ALL files to Base64
-      const filePromises = files.map(file => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve({
-            data: reader.result.split(',')[1], // Remove prefix
-            mime_type: file.type
-          });
-          reader.onerror = error => reject(error);
-        });
-      });
-
-      const uploadedFiles = await Promise.all(filePromises);
-
-      const response = await apiClient.post('/ai/chat', {
-        messages: [{ from_user: true, text: userMsg.text }], // Simplified history for file context
-        nodes: [], edges: [], tasks: [], goals: [], notes: [], // Minimal context
-        uploads: uploadedFiles // Send list of files
-      });
-
-      const aiMsg = { from: 'ai', text: response.data.reply };
-      setChatHistory(prev => [...prev, aiMsg]);
-
-      if (response.data.newMapData) {
-        onAiGeneratedMap(response.data.newMapData);
-        onClose();
-      }
-
-    } catch (error) {
-      console.error(error);
-      setChatHistory(prev => [...prev, { from: 'ai', text: "Error processing your request." }]);
-    } finally {
-      setLoading(false);
+      await apiClient.delete(`/files/${id}`);
+      setFiles(files.filter(f => f.id !== id));
+    } catch (err) {
+      console.error("Delete failed", err);
     }
   };
+
+  const filteredFiles = files.filter(f =>
+    f.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (f.context && f.context.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   if (!isOpen) return null;
 
@@ -106,63 +96,125 @@ export default function FileCenter({ isOpen, onClose, onAiGeneratedMap }) {
     <div className="file-center-overlay">
       <div className="file-center-container">
         <div className="file-header">
-          <h2>📂 Knowledge Base</h2>
+          <div className="header-title">
+            <h2>Knowledge Base</h2>
+            <span className="badge">{files.length} items</span>
+          </div>
           <button className="close-btn" onClick={onClose}><AiOutlineClose /></button>
         </div>
-        
+
         <div className="file-layout">
-          
-          {/* LEFT: FILES */}
+          {/* LEFT: SIDEBAR (Upload/Input) */}
           <div className="file-sidebar">
-            <div className={`drop-zone ${isDragActive ? 'active' : ''}`} {...getRootProps()}>
-              <input {...getInputProps()} />
-              <AiOutlineCloudUpload className="upload-icon" />
-              <p>Drop files or Paste (Ctrl+V)</p>
+
+            {/* TABS */}
+            <div className="tabs-container">
+              <button
+                className={`tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
+                onClick={() => setActiveTab('upload')}
+              >
+                Upload Files
+              </button>
+              <button
+                className={`tab-btn ${activeTab === 'text' ? 'active' : ''}`}
+                onClick={() => setActiveTab('text')}
+              >
+                Add Text / Note
+              </button>
             </div>
 
-            <div className="file-list">
-              {files.map((file, index) => (
-                <div key={index} className="file-item">
-                  <div className="file-info">
-                    <AiOutlineFileText />
-                    <span className="file-name">{file.name}</span>
+            <div className="input-area">
+              {activeTab === 'upload' ? (
+                <div className="upload-section">
+                  <input
+                    type="text"
+                    className="modern-input"
+                    placeholder="Optional context (e.g. 'Project Specs')"
+                    value={context}
+                    onChange={e => setContext(e.target.value)}
+                  />
+                  <div className={`drop-zone ${isDragActive ? 'active' : ''}`} {...getRootProps()}>
+                    <input {...getInputProps()} />
+                    <div className="drop-content">
+                      <AiOutlineCloudUpload className="upload-icon" />
+                      <p>{uploading ? "Uploading..." : "Drop files here or click to upload"}</p>
+                      <span className="sub-text">Supports PDF, Images, Docs</span>
+                    </div>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); removeFile(index); }}>
+                </div>
+              ) : (
+                <div className="text-section">
+                  <input
+                    type="text"
+                    className="modern-input"
+                    placeholder="Title (Optional)"
+                    value={textTitle}
+                    onChange={e => setTextTitle(e.target.value)}
+                  />
+                  <textarea
+                    className="modern-textarea"
+                    placeholder="Paste text, code snippets, or notes here..."
+                    value={textContent}
+                    onChange={e => setTextContent(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="modern-input"
+                    placeholder="Context (e.g. 'React Component')"
+                    value={textContext}
+                    onChange={e => setTextContext(e.target.value)}
+                  />
+                  <button
+                    className="primary-btn"
+                    onClick={handleTextSubmit}
+                    disabled={uploading || !textContent.trim()}
+                  >
+                    {uploading ? "Saving..." : "Save to Knowledge Base"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: CONTENT LIST */}
+          <div className="file-content-area">
+            <div className="search-bar-container">
+              <AiOutlineSearch className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search your knowledge base..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="file-grid">
+              {filteredFiles.map(file => (
+                <div key={file.id} className="file-card">
+                  <div className="file-card-icon">
+                    {file.file_type === 'text/snippet' ? <AiOutlineAlignLeft className="icon-snippet" /> : <AiOutlineFileText className="icon-file" />}
+                  </div>
+                  <div className="file-card-info">
+                    <div className="file-name" title={file.filename}>{file.filename}</div>
+                    <div className="file-meta">
+                      {new Date(file.created_at).toLocaleDateString()} • {file.file_type === 'text/snippet' ? 'Snippet' : 'File'}
+                    </div>
+                    {file.context && <div className="file-tag">{file.context}</div>}
+                  </div>
+                  <button className="delete-btn" onClick={(e) => handleDelete(file.id, e)}>
                     <AiOutlineDelete />
                   </button>
                 </div>
               ))}
-              {files.length === 0 && <p className="no-files">No files attached</p>}
-            </div>
-          </div>
-
-          {/* RIGHT: CHAT */}
-          <div className="file-chat-section">
-            <div className="chat-messages">
-              {chatHistory.map((msg, i) => (
-                <div key={i} className={`chat-bubble ${msg.from}`}>
-                  {msg.text}
+              {files.length === 0 && (
+                <div className="empty-state">
+                  <AiOutlineCloudUpload size={48} />
+                  <p>Your knowledge base is empty.</p>
+                  <span>Upload files or add text to get started.</span>
                 </div>
-              ))}
-              {loading && <div className="chat-bubble ai">Analysis in progress...</div>}
-              <div ref={chatEndRef} />
-            </div>
-
-            <div className="chat-input-box">
-              <input 
-                type="text" 
-                placeholder="Ask about the files..." 
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                disabled={loading}
-              />
-              <button onClick={handleSend} disabled={loading}>
-                <AiOutlineSend />
-              </button>
+              )}
             </div>
           </div>
-
         </div>
       </div>
     </div>

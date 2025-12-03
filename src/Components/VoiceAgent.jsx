@@ -3,9 +3,9 @@ import { AiOutlineAudio, AiOutlineClose } from 'react-icons/ai';
 import apiClient from '../api';
 import './VoiceAgent.css';
 
-export default function VoiceAgent({ 
+export default function VoiceAgent({
   isOpen, onClose, onAction, onCreateGoal, onCreateTask, onDeleteAction, onNavigate, onCreateMap,
-  tasks, goals, notes, nodes, edges 
+  tasks, goals, notes, nodes, edges
 }) {
   const [status, setStatus] = useState("idle");
   const [transcript, setTranscript] = useState("");
@@ -40,11 +40,11 @@ export default function VoiceAgent({
     newRecognition.interimResults = false;
     newRecognition.lang = 'en-US';
     newRecognition.onstart = () => setStatus("listening");
-    
+
     newRecognition.onresult = async (event) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
-      
+
       if (['stop', 'exit', 'close', 'goodbye', 'cancel'].some(cmd => text.toLowerCase().includes(cmd))) {
         speakResponse("Goodbye!");
         isContinuous.current = false;
@@ -82,7 +82,7 @@ export default function VoiceAgent({
   const stopListening = () => {
     isContinuous.current = false;
     if (recognition) recognition.abort();
-    if (synth) synth.cancel(); 
+    if (synth) synth.cancel();
     setStatus("idle");
   };
 
@@ -102,7 +102,7 @@ export default function VoiceAgent({
         .replace(/for/gi, '')
         .replace(/a/gi, '')
         .trim();
-      
+
       if (!topic || topic.length < 2) {
         speakResponse("Please specify a topic");
         return;
@@ -110,11 +110,11 @@ export default function VoiceAgent({
 
       const mapName = `${isRoadmap ? 'Roadmap' : 'Brainstorm'}: ${topic}`;
       speakResponse(`Creating ${isRoadmap ? 'roadmap' : 'brainstorm'} for ${topic}`);
-      
+
       try {
         // Create new map
         const newMapRes = await apiClient.post('/map/', { title: mapName });
-        
+
         // Call AI to generate content
         const cleanNodes = [];
         const response = await apiClient.post('/ai/chat', {
@@ -135,12 +135,12 @@ export default function VoiceAgent({
             nodes: response.data.newMapData.nodes,
             edges: response.data.newMapData.edges || []
           });
-          
+
           // Navigate to the new map
           if (onCreateMap) {
             await onCreateMap(mapName);
           }
-          
+
           speakResponse(`${isRoadmap ? 'Roadmap' : 'Brainstorm'} created with ${response.data.newMapData.nodes.length} items!`);
         } else {
           speakResponse("Could not generate content. Try again");
@@ -155,7 +155,7 @@ export default function VoiceAgent({
     // For all other commands, use AI Chat API
     try {
       const cleanNodes = nodes ? nodes.map(({ selected, dragging, ...n }) => n) : [];
-      
+
       const response = await apiClient.post('/ai/chat', {
         messages: [{ from_user: true, text: text }],
         nodes: cleanNodes,
@@ -168,7 +168,7 @@ export default function VoiceAgent({
       });
 
       const data = response.data;
-      
+
       // Speak AI response
       if (data.reply) {
         speakResponse(data.reply);
@@ -204,9 +204,21 @@ export default function VoiceAgent({
     setStatus("speaking");
     synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    
+
+    // Try to find a "nice human like" voice
+    const voices = synth.getVoices();
+    let preferredVoice = voices.find(v => v.name.includes("Google US English")); // Chrome standard
+    if (!preferredVoice) preferredVoice = voices.find(v => v.name.includes("Samantha")); // Mac standard
+    if (!preferredVoice) preferredVoice = voices.find(v => v.name.includes("Female")); // Generic female
+    if (!preferredVoice) preferredVoice = voices.find(v => v.lang === "en-US"); // Generic US English
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    utterance.rate = 1.05; // Slightly faster for natural flow
+    utterance.pitch = 1.0; // Natural pitch
+
     utterance.onend = () => {
       if (isContinuous.current) {
         setStatus("listening");
@@ -229,15 +241,15 @@ export default function VoiceAgent({
           {status === "speaking" && <div className="wave-animation"></div>}
         </div>
       </div>
-      
+
       <div className="voice-feedback">
         <p className="voice-status">
-          {status === "listening" ? "🎤 LISTENING..." : 
-           status === "processing" ? "🤔 Processing..." : 
-           status === "speaking" ? "🔊 Speaking..." : "Ready"}
+          {status === "listening" ? "🎤 LISTENING..." :
+            status === "processing" ? "🤔 Processing..." :
+              status === "speaking" ? "🔊 Speaking..." : "Ready"}
         </p>
         {transcript && <p className="voice-transcript">"{transcript}"</p>}
-        
+
         <div className="voice-commands">
           <p className="commands-title">💡 Just speak naturally!</p>
           <div className="command-categories">

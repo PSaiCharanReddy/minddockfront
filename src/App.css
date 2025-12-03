@@ -39,14 +39,16 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  user-select: none; /* Prevents accidental text selection while dragging */
+  user-select: none;
+  /* Prevents accidental text selection while dragging */
 }
 
 .app-container {
   display: flex;
   width: 100vw;
   height: 100vh;
-  flex-direction: column; /* TopBar is top, content is below */
+  flex-direction: column;
+  /* TopBar is top, content is below */
 }
 
 .react-flow-wrapper {
@@ -61,7 +63,8 @@ body {
   background-color: var(--node-bg);
   color: var(--text-main);
   border: 1px solid var(--node-border);
-  border-radius: 12px; /* ROUNDED CORNERS */
+  border-radius: 12px;
+  /* ROUNDED CORNERS */
   padding: 12px 20px;
   min-width: 150px;
   text-align: center;
@@ -83,7 +86,8 @@ body {
 .node-label {
   font-weight: 600;
   font-size: 1rem;
-  pointer-events: none; /* Let clicks pass through */
+  pointer-events: none;
+  /* Let clicks pass through */
 }
 
 .node-input {
@@ -113,7 +117,8 @@ body {
   z-index: 10;
 }
 
-.summary-toggle-btn, .add-summary-btn {
+.summary-toggle-btn,
+.add-summary-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -124,7 +129,9 @@ body {
   justify-content: center;
   padding: 2px;
 }
-.summary-toggle-btn:hover, .add-summary-btn:hover {
+
+.summary-toggle-btn:hover,
+.add-summary-btn:hover {
   color: var(--accent-color);
 }
 
@@ -135,8 +142,9 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px;
-  z-index: 99999; /* FORCE TOP */
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  z-index: 99999;
+  /* FORCE TOP */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   min-width: 180px;
@@ -168,6 +176,44 @@ body {
   width: 100%;
   font-size: 1.5rem;
   color: var(--text-muted);
+}
+
+.top-right-ui {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.save-indicator {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.roadmap-btn {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(245, 124, 0, 0.3);
+  transition: transform 0.2s;
+}
+
+.roadmap-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(245, 124, 0, 0.4);
 }
 
 .add-node-btn {

@@ -3,7 +3,7 @@ import { AiOutlinePlus, AiOutlineDelete, AiOutlineRobot, AiOutlineSearch } from 
 import apiClient from '../api';
 import './Journal.css';
 
-export default function Journal({ isOpen, toggleJournal }) {
+export default function Journal({ isOpen, toggleJournal, notes: propNotes }) {
   const [notes, setNotes] = useState([]);
   const [content, setContent] = useState("");
   const [search, setSearch] = useState("");
@@ -12,19 +12,12 @@ export default function Journal({ isOpen, toggleJournal }) {
   const [loadingSummary, setLoadingSummary] = useState(false);
 
   useEffect(() => {
-    if (isOpen) fetchNotes();
-  }, [isOpen]);
-
-  const fetchNotes = async () => {
-    try {
-      const res = await apiClient.get('/notes/');
+    if (propNotes) {
       // Sort by newest first
-      const sorted = res.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const sorted = [...propNotes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setNotes(sorted);
-    } catch (error) {
-      console.error("Failed to load notes", error);
     }
-  };
+  }, [propNotes]);
 
   const createNote = async () => {
     if (!content.trim()) return;
@@ -39,7 +32,7 @@ export default function Journal({ isOpen, toggleJournal }) {
   };
 
   const deleteNote = async (id) => {
-    if(!window.confirm("Delete this note?")) return;
+    if (!window.confirm("Delete this note?")) return;
     try {
       await apiClient.delete(`/notes/${id}`);
       setNotes(notes.filter(n => n.id !== id));
@@ -58,20 +51,20 @@ export default function Journal({ isOpen, toggleJournal }) {
 
     setLoadingSummary(true);
     setAiSummary(""); // Clear previous summary
-    
+
     try {
       // Use up to 10 most recent notes for analysis
       const recentNotes = notes.slice(0, 10);
       const noteText = recentNotes.map((n, idx) => `Entry ${idx + 1} (${new Date(n.created_at).toLocaleDateString()}):\n${n.content}`).join("\n\n---\n\n");
-      
+
       const res = await apiClient.post('/ai/chat', {
-        messages: [{ 
-          from_user: true, 
-          text: `Analyze my recent journal entries and identify patterns, themes, emotions, and insights. Provide actionable suggestions:\n\n${noteText}` 
+        messages: [{
+          from_user: true,
+          text: `Analyze my recent journal entries and identify patterns, themes, emotions, and insights. Provide actionable suggestions:\n\n${noteText}`
         }],
         nodes: [], edges: [], tasks: [], goals: [], notes: [] // Context not needed for this
       });
-      
+
       setAiSummary(res.data.reply);
     } catch (error) {
       console.error("AI Summary failed", error);
@@ -103,10 +96,10 @@ export default function Journal({ isOpen, toggleJournal }) {
       <div className="journal-controls">
         <div className="search-bar">
           <AiOutlineSearch />
-          <input 
-            type="text" 
-            placeholder="Search notes..." 
-            value={search} 
+          <input
+            type="text"
+            placeholder="Search notes..."
+            value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
@@ -118,8 +111,8 @@ export default function Journal({ isOpen, toggleJournal }) {
       {/* Creation Area */}
       {isCreating && (
         <div className="create-note-area">
-          <textarea 
-            placeholder="What's on your mind?" 
+          <textarea
+            placeholder="What's on your mind?"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             autoFocus

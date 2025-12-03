@@ -3,11 +3,11 @@ import { AiOutlinePlus, AiOutlineDelete, AiOutlineTrophy, AiOutlineCalendar, AiO
 import apiClient from '../api';
 import './Goals.css';
 
-export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
+export default function Goals({ isOpen, toggleGoals, isEmbedded, goals: propGoals }) {
   const [goals, setGoals] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState(null);
-  
+
   // Goal creation form
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [goalType, setGoalType] = useState("short_term"); // 'short_term' or 'long_term'
@@ -15,17 +15,10 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
   const [dailyTime, setDailyTime] = useState(60); // minutes
 
   useEffect(() => {
-    if (isOpen) fetchGoals();
-  }, [isOpen]);
-
-  const fetchGoals = async () => {
-    try {
-      const response = await apiClient.get('/goals/');
-      setGoals(response.data);
-    } catch (error) {
-      console.error("Failed to load goals", error);
+    if (propGoals) {
+      setGoals(propGoals);
     }
-  };
+  }, [propGoals]);
 
   const createGoal = async (e) => {
     e.preventDefault();
@@ -41,14 +34,14 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
         target_date: targetDate.toISOString(),
         progress_percentage: 0
       });
-      
+
       setGoals([...goals, response.data]);
       setNewGoalTitle("");
       setGoalType("short_term");
       setDuration(60);
       setDailyTime(60);
       setIsCreating(false);
-      
+
       alert(`✅ Goal created! ${goalType === 'short_term' ? '🔥 Short-term' : '🎯 Long-term'} goal for ${duration} days\n\nWould you like to add a roadmap to this goal?`);
     } catch (error) {
       console.error("Error creating goal", error);
@@ -72,8 +65,8 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
     setGoals(goals.map(g => g.id === goal.id ? { ...g, progress_percentage: progress } : g));
     try {
       await apiClient.put(`/goals/${goal.id}/progress?progress=${progress}`);
-    } catch (error) { 
-      fetchGoals(); 
+    } catch (error) {
+      fetchGoals();
     }
   };
 
@@ -87,7 +80,7 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
     // For now, just increase progress by 5%
     const goal = goals.find(g => g.id === goalId);
     const newProgress = Math.min(100, goal.progress_percentage + 5);
-    
+
     await updateProgress(goal, newProgress);
     alert(`✅ Check-in logged!\n⏱️ ${timeSpent} minutes\n📝 ${update}\n\n📊 Progress: ${goal.progress_percentage}% → ${newProgress}%`);
   };
@@ -122,10 +115,10 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
         </button>
       ) : (
         <form onSubmit={createGoal} className="create-goal-form">
-          <input 
+          <input
             autoFocus
-            type="text" 
-            placeholder="Goal title..." 
+            type="text"
+            placeholder="Goal title..."
             value={newGoalTitle}
             onChange={(e) => setNewGoalTitle(e.target.value)}
             required
@@ -134,14 +127,14 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
           <div className="form-group">
             <label>Goal Type:</label>
             <div className="type-selector">
-              <button 
+              <button
                 type="button"
                 className={`type-btn ${goalType === 'short_term' ? 'active' : ''}`}
                 onClick={() => setGoalType('short_term')}
               >
                 🔥 Short-term
               </button>
-              <button 
+              <button
                 type="button"
                 className={`type-btn ${goalType === 'long_term' ? 'active' : ''}`}
                 onClick={() => setGoalType('long_term')}
@@ -153,7 +146,7 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
 
           <div className="form-group">
             <label>Duration: {duration} days</label>
-            <input 
+            <input
               type="range"
               min="7"
               max="365"
@@ -195,8 +188,8 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
           const isCompleted = goal.progress_percentage >= 100;
 
           return (
-            <div 
-              key={goal.id} 
+            <div
+              key={goal.id}
               className={`goal-card ${isCompleted ? 'completed' : ''} ${type === 'short_term' ? 'short-term' : 'long-term'}`}
               onClick={() => setSelectedGoal(selectedGoal?.id === goal.id ? null : goal)}
             >
@@ -217,8 +210,8 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
               {/* Progress Bar */}
               <div className="progress-section">
                 <div className="progress-bar-bg">
-                  <div 
-                    className="progress-bar-fill" 
+                  <div
+                    className="progress-bar-fill"
                     style={{ width: `${goal.progress_percentage}%` }}
                   ></div>
                 </div>
@@ -227,7 +220,7 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
 
               {/* Progress Controls */}
               <div className="progress-controls">
-                <button 
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     updateProgress(goal, goal.progress_percentage - 10);
@@ -236,7 +229,7 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
                 >
                   −
                 </button>
-                <button 
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     updateProgress(goal, goal.progress_percentage + 10);
@@ -251,9 +244,9 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
               {selectedGoal?.id === goal.id && (
                 <div className="goal-details">
                   {goal.description && <p>{goal.description}</p>}
-                  
+
                   <div className="detail-actions">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCheckin(goal.id);
@@ -262,7 +255,7 @@ export default function Goals({ isOpen, toggleGoals, isEmbedded }) {
                     >
                       <AiOutlineCheckCircle /> Daily Check-in
                     </button>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteGoal(goal.id);
