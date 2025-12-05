@@ -13,89 +13,194 @@
 }
 
 .rec-container {
-  width: 450px;
-  max-width: 90%;
+  width: 800px;
+  /* Increased from 450px */
+  max-width: 95vw;
   background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  /* Slightly more rounded */
+  padding: 25px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
   color: var(--text-main);
-  max-height: 80vh;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
 }
 
-.rec-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 10px;
-  flex-shrink: 0;
-}
-
-.rec-header h3 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.2rem;
-}
-
-.rec-close-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 24px;
-  cursor: pointer;
-  transition: color 0.2s;
-  padding: 0;
-}
-
-.rec-close-btn:hover {
-  color: var(--text-main);
-}
+/* ... header styles ... */
 
 .rec-body {
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  padding-right: 5px;
+  /* Space for scrollbar */
 }
 
-.rec-list {
+/* ... list styles ... */
+
+/* --- ANALYTICS DASHBOARD --- */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  /* Score (smaller) | Chart (wider) */
+  gap: 20px;
+  margin-bottom: 30px;
+  align-items: stretch;
+}
+
+.analytics-card {
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: center;
+  /* Center vertically */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
 }
 
-.rec-empty {
-  text-align: center;
-  padding: 40px 20px;
+.analytics-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-color);
+}
+
+.analytics-card h4 {
+  margin: 0 0 15px 0;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
 }
 
-.rec-card {
-  padding: 15px;
-  border-radius: 8px;
+.analytics-card.wide {
+  grid-column: auto;
+}
+
+/* Modern Score Card */
+.score-card-modern {
   display: flex;
-  gap: 15px;
-  align-items: flex-start;
-  background-color: var(--bg-input);
-  border-left: 4px solid #888;
-  transition: all 0.2s ease;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 25px;
+  background: linear-gradient(145deg, var(--bg-secondary), var(--bg-input));
 }
 
-.rec-card:hover {
-  background-color: var(--bg-panel);
-  transform: translateX(2px);
+.score-header {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
 }
 
-.rec-card.warning {
-  border-color: #ff453a;
-  background-color: rgba(255, 69, 58, 0.1);
+.score-display {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.score-number {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--primary-color);
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(0, 122, 255, 0.3);
+}
+
+.score-max {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.score-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--accent-hover));
+  border-radius: 3px;
+  transition: width 1s ease-out;
+}
+
+/* Responsive adjustments for the grid */
+@media (max-width: 900px) {
+  .analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .analytics-card.wide {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-card.wide {
+    grid-column: span 1;
+  }
+}
+
+/* Score Card */
+.score-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: conic-gradient(var(--primary-color) 0%, var(--primary-color) var(--score, 70%), var(--bg-app) var(--score, 70%), var(--bg-app) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.score-circle::before {
+  content: '';
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background: var(--bg-secondary);
+  border-radius: 50%;
+}
+
+.score-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--text-primary);
+  z-index: 1;
+}
+
+.score-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  z-index: 1;
+}
+
+.insights-title {
+  margin: 20px 0 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  color: var(--primary-color);
 }
 
 .rec-card.success {
@@ -182,8 +287,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Scrollbar styling */

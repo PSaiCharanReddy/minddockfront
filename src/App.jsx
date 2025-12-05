@@ -52,6 +52,7 @@ import TopBar from './Components/TopBar';
 import FocusMode from './Components/FocusMode';
 import FileCenter from './Components/FileCenter'; // Universal Input
 import VoiceAgent from './Components/VoiceAgent'; // Voice Mode
+import BrainDump from './Components/BrainDump';
 
 // --- HOOKS ---
 import { useUndoRedo } from './hooks/useUndoRedo';
@@ -61,25 +62,71 @@ let nodeId = 1000;
 
 // --- NODE WRAPPER ---
 function MindNode(props) {
-  const { setNodes } = useReactFlow();
+  const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
+
+  // Calculate children status
+  const edges = getEdges ? getEdges() : [];
+  const nodes = getNodes ? getNodes() : [];
+  const myId = props.id;
+
+  const childEdges = Array.isArray(edges) ? edges.filter(e => e.source === myId) : [];
+  const hasChildren = childEdges.length > 0;
+
+  // Check if children are hidden (check the first child found)
+  const firstChildId = childEdges[0]?.target;
+  const firstChild = Array.isArray(nodes) ? nodes.find(n => n.id === firstChildId) : null;
+  const areChildrenHidden = firstChild?.hidden;
+
   const updateNodeLabel = useCallback((nodeId, label) => {
     setNodes((nds) => nds.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, label } } : node)));
   }, [setNodes]);
+
   const updateNodeSummary = useCallback((nodeId, summary) => {
     setNodes((nds) => nds.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, summary } } : node)));
   }, [setNodes]);
+
+  const toggleChildren = useCallback((nodeId) => {
+    const currentEdges = getEdges ? getEdges() : [];
+    const currentNodes = getNodes ? getNodes() : [];
+
+    // Find immediate children
+    const childrenIds = new Set();
+    currentEdges.forEach(e => {
+      if (e.source === nodeId) childrenIds.add(e.target);
+    });
+
+    if (childrenIds.size === 0) return;
+
+    // Determine target state (toggle based on first child)
+    const firstChild = currentNodes.find(n => n.id === [...childrenIds][0]);
+    const shouldHide = !firstChild.hidden;
+
+    // Update nodes and edges
+    setNodes(nds => nds.map(n => childrenIds.has(n.id) ? { ...n, hidden: shouldHide } : n));
+    setEdges(eds => eds.map(e => (e.source === nodeId || childrenIds.has(e.target)) ? { ...e, hidden: shouldHide } : e));
+  }, [setNodes, setEdges, getNodes, getEdges]);
+
   return (
     <CustomNode
       {...props}
       onLabelChange={updateNodeLabel}
       onSummaryChange={updateNodeSummary}
+      onToggleChildren={toggleChildren}
+      hasChildren={hasChildren}
+      areChildrenHidden={areChildrenHidden}
       aiLoadingNode={props.aiLoadingNode}
     />
   );
 }
 
 // --- MAIN APP ---
+
+// ...
+
 function App() {
+  // --- STATE: View Navigation ---
+  const [view, setView] = useState('dashboard'); // 'dashboard', 'map', 'braindump'
+
   // --- STATE: Map Data ---
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -226,11 +273,13 @@ function App() {
       setCurrentMapId(null);
       setCurrentMapTitle("Dashboard");
       setNodes([]); setEdges([]);
+      setView('dashboard');
       return;
     }
 
     isLoaded.current = false;
     setIsLoading(true);
+    setView('map'); // Switch to map view
 
     try {
       const response = await apiClient.get(`/map/${id}`);
@@ -496,6 +545,24 @@ function App() {
     else if (action === 'selectGroup') selectConnectedGroup(contextMenu.id);
     else if (action === 'setNodeColor') setNodes((nds) => nds.map((n) => n.id === contextMenu.id ? { ...n, data: { ...n.data, style: { backgroundColor: payload.background, color: payload.text } } } : n));
     else if (action === 'setEdgeStyle') setEdges((eds) => eds.map((e) => e.id === contextMenu.id ? { ...e, markerEnd: payload === 'directional' ? { type: MarkerType.ArrowClosed } : undefined, style: payload === 'dotted' ? { strokeDasharray: '5 5' } : {} } : e));
+
+    else if (action === 'hideSubtasks' || action === 'showSubtasks') {
+      const descendants = new Set();
+      const stack = [contextMenu.id];
+      while (stack.length > 0) {
+        const curr = stack.pop();
+        edges.forEach(e => {
+          if (e.source === curr && !descendants.has(e.target)) {
+            descendants.add(e.target);
+            stack.push(e.target);
+          }
+        });
+      }
+      const isHidden = action === 'hideSubtasks';
+      setNodes(nds => nds.map(n => descendants.has(n.id) ? { ...n, hidden: isHidden } : n));
+      setEdges(eds => eds.map(e => descendants.has(e.source) || descendants.has(e.target) ? { ...e, hidden: isHidden } : e));
+    }
+
     setContextMenu(null);
   }, [contextMenu, setNodes, setEdges, generateRoadmap, takeSnapshot, nodes, edges, selectConnectedGroup]);
 
@@ -520,6 +587,14 @@ function App() {
     }
   };
 
+  // --- 10. NAVIGATION HELPERS ---
+  const openBrainDump = () => {
+    setCurrentMapId(null);
+    setCurrentMapTitle("Brain Dump");
+    setView('braindump');
+    setIsLeftSidebarOpen(false);
+  };
+
   // --- RENDER ---
   return (
     <div className={`app-container ${theme}`}>
@@ -540,25 +615,28 @@ function App() {
         currentMapTitle={currentMapTitle || "Dashboard"}
         onGoHome={() => loadMap(null)}
         onOpenFileCenter={() => setIsFileCenterOpen(true)}
-        onToggleVoice={() => setIsVoiceOpen(!isVoiceOpen)} // Pass Voice Toggle
+        onToggleVoice={() => setIsVoiceOpen(!isVoiceOpen)}
       />
 
       <div className="react-flow-wrapper" ref={reactFlowWrapper} style={{ marginTop: '60px' }}>
 
-        <div className="top-right-ui">
-          <div className="save-indicator">{isSaving ? "Saving..." : "Saved"}</div>
-          {currentMapId && (
-            <button
-              onClick={handleRoadmapExecution}
-              className="roadmap-btn"
-              title="Convert to Goal & Tasks"
-            >
-              <AiOutlineTrophy style={{ marginRight: '5px' }} /> Follow Roadmap
-            </button>
-          )}
-        </div>
+        {/* Top Right UI (Save, etc) - Only show for Map */}
+        {view === 'map' && (
+          <div className="top-right-ui">
+            <div className="save-indicator">{isSaving ? "Saving..." : "Saved"}</div>
+            {currentMapId && (
+              <button
+                onClick={handleRoadmapExecution}
+                className="roadmap-btn"
+                title="Convert to Goal & Tasks"
+              >
+                <AiOutlineTrophy style={{ marginRight: '5px' }} /> Follow Roadmap
+              </button>
+            )}
+          </div>
+        )}
 
-        {currentMapId ? (
+        {view === 'map' ? (
           <>
             <button onClick={() => addNode({})} className="add-node-btn">+ Note</button>
             <ReactFlow
@@ -573,6 +651,10 @@ function App() {
               <MiniMap nodeColor={(n) => n.style?.backgroundColor || '#333'} style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)' }} zoomable pannable />
             </ReactFlow>
           </>
+        ) : view === 'braindump' ? (
+          <div className="dashboard-wrapper" style={{ width: '100%', height: '100%', overflowY: 'auto' }}>
+            <BrainDump onRefresh={fetchAllData} />
+          </div>
         ) : (
           <div className="dashboard-wrapper" style={{ width: '100%', height: '100%', overflowY: 'auto' }}>
             {isLoading ? <div className="loading-screen">Loading MindDock...</div> :
@@ -592,7 +674,18 @@ function App() {
       </div>
 
       {/* --- SIDEBARS & PANELS --- */}
-      <Sidebar maps={maps} currentMapId={currentMapId} onSelectMap={loadMap} onCreateMap={createMap} onDeleteMap={deleteMap} isOpen={isLeftSidebarOpen} toggleSidebar={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)} />
+      <Sidebar
+        maps={maps}
+        currentMapId={currentMapId}
+        onSelectMap={loadMap}
+        onCreateMap={createMap}
+        onDeleteMap={deleteMap}
+        isOpen={isLeftSidebarOpen}
+        toggleSidebar={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+        onOpenBrainDump={openBrainDump}
+        onOpenDashboard={() => loadMap(null)}
+        currentView={view}
+      />
 
       <RightPanel
         isOpen={rightPanel.isOpen}

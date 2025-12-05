@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AiOutlinePlus, AiOutlineDelete, AiOutlineMenu } from 'react-icons/ai';
+import { AiOutlinePlus, AiOutlineDelete, AiOutlineMenu, AiOutlineUnorderedList, AiOutlineHome } from 'react-icons/ai';
 import './Sidebar.css';
 
 export default function Sidebar({
@@ -9,7 +9,10 @@ export default function Sidebar({
   onCreateMap,
   onDeleteMap,
   isOpen,
-  toggleSidebar
+  toggleSidebar,
+  onOpenBrainDump,
+  onOpenDashboard,
+  currentView
 }) {
   const [newMapTitle, setNewMapTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -65,9 +68,26 @@ export default function Sidebar({
 
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <h3>My Maps</h3>
+          <h3>MindDock</h3>
           <button className="close-btn" onClick={toggleSidebar}>×</button>
         </div>
+
+        <div className="sidebar-nav">
+          <div
+            className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
+            onClick={onOpenDashboard}
+          >
+            <AiOutlineHome /> Dashboard
+          </div>
+          <div
+            className={`nav-item ${currentView === 'braindump' ? 'active' : ''}`}
+            onClick={onOpenBrainDump}
+          >
+            <AiOutlineUnorderedList /> Brain Dump
+          </div>
+        </div>
+
+        <div className="sidebar-section-title">My Maps</div>
 
         <div className="maps-list">
           {maps.map((map) => (

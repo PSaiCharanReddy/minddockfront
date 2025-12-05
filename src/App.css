@@ -231,3 +231,107 @@ body {
   z-index: 50;
   cursor: pointer;
 }
+
+/* Toggle Children Button */
+.toggle-children-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 5px;
+  transition: all 0.2s ease;
+}
+
+.toggle-children-btn:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.toggle-children-btn.collapsed {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+.toggle-children-btn.expanded {
+  background: var(--bg-app);
+}
+
+/* --- MOBILE OPTIMIZATION --- */
+@media (max-width: 768px) {
+  .app-container {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Sidebar: Full width overlay */
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+    transform: translateX(-100%);
+    z-index: 2000;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Right Panel: Full width overlay */
+  .right-panel-container {
+    width: 100%;
+    max-width: 100%;
+    transform: translateX(100%);
+    z-index: 2000;
+  }
+
+  .right-panel-container.open {
+    transform: translateX(0);
+  }
+
+  /* Top Right UI: Adjust for smaller screens */
+  .top-right-ui {
+    top: 10px;
+    right: 10px;
+    gap: 5px;
+  }
+
+  .roadmap-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .save-indicator {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  /* Add Node Button: Move up slightly to avoid bottom navs */
+  .add-node-btn {
+    bottom: 80px;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+
+  /* Analytics Overlay: Full screen */
+  .rec-container {
+    width: 95%;
+    height: 90%;
+    max-height: 90%;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+    /* Stack charts */
+  }
+
+  .analytics-card.wide {
+    grid-column: span 1;
+  }
+}

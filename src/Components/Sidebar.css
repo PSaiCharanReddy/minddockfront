@@ -3,17 +3,22 @@
   top: 0;
   left: 0;
   width: 280px;
-  height: 100vh; /* Fallback */
-  height: 100dvh; /* Fix for Mobile Browsers */
+  height: 100vh;
+  /* Fallback */
+  height: 100dvh;
+  /* Fix for Mobile Browsers */
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
-  flex-direction: column; /* Stack children */
+  flex-direction: column;
+  /* Stack children */
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 1200; /* Above almost everything */
+  z-index: 1200;
+  /* Above almost everything */
   box-shadow: 4px 0 15px var(--shadow-color);
-  padding-top: 60px; /* Space for TopBar */
+  padding-top: 60px;
+  /* Space for TopBar */
 }
 
 .sidebar.open {
@@ -21,7 +26,8 @@
 }
 
 .sidebar-header {
-  flex-shrink: 0; /* Don't shrink */
+  flex-shrink: 0;
+  /* Don't shrink */
   padding: 15px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -30,15 +36,28 @@
   background-color: var(--bg-panel);
 }
 
-.sidebar-header h3 { margin: 0; color: var(--text-main); }
-.close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+.sidebar-header h3 {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 24px;
+  cursor: pointer;
+}
 
 /* --- SCROLLABLE AREA --- */
 .maps-list {
-  flex-grow: 1; /* Take up all remaining space */
-  overflow-y: auto; /* Scroll ONLY this part */
+  flex-grow: 1;
+  /* Take up all remaining space */
+  overflow-y: auto;
+  /* Scroll ONLY this part */
   padding: 10px;
-  -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Smooth scroll on iOS */
 }
 
 .map-item {
@@ -93,8 +112,15 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .map-item.active .new-badge {
@@ -104,7 +130,8 @@
 
 /* --- STICKY FOOTER (Create Map) --- */
 .sidebar-footer {
-  flex-shrink: 0; /* Don't shrink */
+  flex-shrink: 0;
+  /* Don't shrink */
   padding: 15px;
   margin-bottom: 17%;
   border-top: 1px solid var(--border-color);
@@ -118,7 +145,8 @@
 /* --- MOBILE OVERRIDE --- */
 @media (max-width: 768px) {
   .sidebar {
-    width: 85%; /* Easier to see map behind */
+    width: 85%;
+    /* Easier to see map behind */
     max-width: 320px;
   }
 }
@@ -139,8 +167,10 @@
   width: 100%;
   max-width: 420px;
 
-  resize: none; /* don't let user drag corner */
-  overflow-y: auto; /* add vertical scroll when needed */
+  resize: none;
+  /* don't let user drag corner */
+  overflow-y: auto;
+  /* add vertical scroll when needed */
   line-height: 1.4;
 
   box-sizing: border-box;
@@ -211,4 +241,43 @@
 
 .map-item.active .delete-map-btn:hover {
   color: white;
+}
+
+/* --- NAVIGATION --- */
+.sidebar-nav {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 15px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background: rgba(0, 122, 255, 0.1);
+  color: var(--primary-color);
+  border-right: 3px solid var(--primary-color);
+}
+
+.sidebar-section-title {
+  padding: 0 20px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }

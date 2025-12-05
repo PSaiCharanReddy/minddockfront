@@ -28,21 +28,29 @@ export default function VoiceAgent({
 
   const startListening = () => {
     if (!isContinuous.current) return;
-    if (!('webkitSpeechRecognition' in window)) {
-      alert("Voice not supported. Try Chrome.");
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported in this browser. Please use Chrome or Edge.");
       return;
     }
 
     if (recognition) recognition.abort();
 
-    const newRecognition = new window.webkitSpeechRecognition();
-    newRecognition.continuous = false;
+    const newRecognition = new SpeechRecognition();
+    newRecognition.continuous = false; // We handle loop manually for better control
     newRecognition.interimResults = false;
     newRecognition.lang = 'en-US';
-    newRecognition.onstart = () => setStatus("listening");
+
+    newRecognition.onstart = () => {
+      console.log("Voice recognition started");
+      setStatus("listening");
+    };
 
     newRecognition.onresult = async (event) => {
       const text = event.results[0][0].transcript;
+      console.log("Transcript:", text);
       setTranscript(text);
 
       if (['stop', 'exit', 'close', 'goodbye', 'cancel'].some(cmd => text.toLowerCase().includes(cmd))) {
@@ -56,27 +64,49 @@ export default function VoiceAgent({
     };
 
     newRecognition.onerror = (event) => {
-      if (event.error === 'no-speech' && isContinuous.current) {
+      console.error("Voice error:", event.error);
+      if (event.error === 'not-allowed') {
+        alert("Microphone access denied. Please allow microphone access in your browser settings.");
+        isContinuous.current = false;
+        onClose();
+      } else if (event.error === 'no-speech' && isContinuous.current) {
+        // Just restart if no speech
         setTimeout(() => {
           if (isContinuous.current) startListening();
         }, 100);
       } else if (event.error !== 'aborted' && isContinuous.current) {
+        // Retry on other errors
         setTimeout(() => startListening(), 1000);
       }
     };
 
     newRecognition.onend = () => {
       if (isContinuous.current) {
+        // Robust restart
         setTimeout(() => {
-          if (isContinuous.current) startListening();
-        }, 100);
+          if (isContinuous.current) {
+            try {
+              newRecognition.start();
+            } catch (e) {
+              // console.warn("Voice restart failed, retrying...", e);
+              setTimeout(() => {
+                if (isContinuous.current) startListening();
+              }, 500);
+            }
+          }
+        }, 200);
       } else {
         setStatus("idle");
       }
     };
 
     setRecognition(newRecognition);
-    try { newRecognition.start(); } catch (e) { console.error(e); }
+    try {
+      newRecognition.start();
+    } catch (e) {
+      console.error("Failed to start recognition:", e);
+      alert("Failed to access microphone: " + e.message);
+    }
   };
 
   const stopListening = () => {
@@ -236,37 +266,17 @@ export default function VoiceAgent({
     <div className="voice-overlay">
       <div className={`voice-orb ${status}`}>
         <div className="orb-core">
-          {status === "listening" && <AiOutlineAudio className="mic-icon" />}
-          {status === "processing" && <div className="pulse-animation"></div>}
-          {status === "speaking" && <div className="wave-animation"></div>}
+          {/* Icons removed for cleaner look, just the orb */}
         </div>
       </div>
 
       <div className="voice-feedback">
         <p className="voice-status">
-          {status === "listening" ? "🎤 LISTENING..." :
-            status === "processing" ? "🤔 Processing..." :
-              status === "speaking" ? "🔊 Speaking..." : "Ready"}
+          {status === "listening" ? "Listening..." :
+            status === "processing" ? "Thinking..." :
+              status === "speaking" ? "Speaking..." : "Ready"}
         </p>
         {transcript && <p className="voice-transcript">"{transcript}"</p>}
-
-        <div className="voice-commands">
-          <p className="commands-title">💡 Just speak naturally!</p>
-          <div className="command-categories">
-            <div className="command-group">
-              <strong>Examples:</strong>
-              <ul>
-                <li>"create roadmap for Python"</li>
-                <li>"brainstorm app ideas"</li>
-                <li>"create goal to learn React"</li>
-                <li>"create task buy groceries"</li>
-                <li>"list all tasks"</li>
-                <li>"open tasks"</li>
-              </ul>
-            </div>
-          </div>
-          <p className="tip-text">ℹ️ Say "stop" to exit</p>
-        </div>
       </div>
 
       <button onClick={onClose} className="voice-close-btn"><AiOutlineClose /></button>

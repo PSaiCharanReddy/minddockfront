@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { AiOutlineEye, AiOutlineEyeInvisible, AiOutlineLoading } from 'react-icons/ai';
 
-function CustomNode({ 
-  id, data, selected, 
-  onLabelChange, onSummaryChange, 
-  aiLoadingNode 
+function CustomNode({
+  id, data, selected,
+  onLabelChange, onSummaryChange, onToggleChildren,
+  hasChildren, areChildrenHidden,
+  aiLoadingNode
 }) {
-  
+
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [label, setLabel] = useState(data.label);
@@ -75,12 +76,26 @@ function CustomNode({
             )}
           </div>
         </div>
-        
+
         <div className="summary-controls">
           {isLoading && (
             <div className="spinner">
               <AiOutlineLoading />
             </div>
+          )}
+
+          {/* Toggle Children Button */}
+          {hasChildren && !isLoading && (
+            <button
+              className={`toggle-children-btn ${areChildrenHidden ? 'collapsed' : 'expanded'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleChildren(id);
+              }}
+              title={areChildrenHidden ? "Show Subtasks" : "Hide Subtasks"}
+            >
+              {areChildrenHidden ? "+" : "−"}
+            </button>
           )}
 
           {!isLoading && (summary || isEditingSummary) ? (

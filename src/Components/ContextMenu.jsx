@@ -28,19 +28,19 @@ export default function ContextMenu({
           <button onClick={() => handleAction('generateRoadmap')}>
             🤖 Generate Roadmap
           </button>
-          
+
           <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }}></div>
 
           <button onClick={() => handleAction('addToTimetable')}>
             📅 Add Single to Today
           </button>
-          
+
           <button onClick={() => handleAction('planRoadmap')}>
-             🗓️ Plan Roadmap (1 Day/Node)
+            🗓️ Plan Roadmap (1 Day/Node)
           </button>
-          
+
           <button onClick={() => handleAction('addToGoals')}>
-             🎯 Set as Goal
+            🎯 Set as Goal
           </button>
 
           <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }}></div>
@@ -51,11 +51,20 @@ export default function ContextMenu({
           <button onClick={() => handleAction('selectGroup')}>
             🔗 Select Entire Group
           </button>
-          
+
           <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }}></div>
-          
+
+          <button onClick={() => handleAction('hideSubtasks')}>
+            👁️‍🗨️ Hide Subtasks
+          </button>
+          <button onClick={() => handleAction('showSubtasks')}>
+            👁️ Show Subtasks
+          </button>
+
+          <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }}></div>
+
           {/* --- COLORS --- */}
-          <p style={{paddingLeft: 10, fontSize: '0.75rem', color: 'var(--text-muted)'}}>COLOR</p>
+          <p style={{ paddingLeft: 10, fontSize: '0.75rem', color: 'var(--text-muted)' }}>COLOR</p>
           <button onClick={() => handleAction('setNodeColor', { background: '#66bb6a', text: '#fff' })}>Green (Start)</button>
           <button onClick={() => handleAction('setNodeColor', { background: '#ef5350', text: '#fff' })}>Red (End)</button>
           <button onClick={() => handleAction('setNodeColor', { background: '#ffee58', text: '#222' })}>Yellow (Important)</button>
